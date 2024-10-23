@@ -1,0 +1,11 @@
+[package]
+name = "maiden-cuda"
+version = "0.1.0-dev"
+description = ""
+
+license.workspace = true
+authors.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
