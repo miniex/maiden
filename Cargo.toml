@@ -1,11 +1,15 @@
 [package]
 name = "maiden-cuda"
 version = "0.1.0-dev"
-description = ""
-
-license.workspace = true
-authors.workspace = true
-edition.workspace = true
-publish.workspace = true
+description = "CUDA implementation for Maiden Engine"
+license = "MIT OR Apache-2.0"
+authors = ["Han Damin <miniex@daminstudio.net>"]
+edition = "2021"
+publish = true
+repository = "https://github.com/miniex/maiden-cuda"
+documentation = "https://docs.rs/maiden-cuda"
+readme = "README.md"
+keywords = ["cuda", "gpu", "maiden"]
+categories = ["science", "gpu"]
 
 [dependencies]
