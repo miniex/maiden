@@ -1,6 +1,12 @@
 [workspace]
 members = ["crates/*"]
 
+[workspace.dependencies]
+maiden-cuda_cuda-core = { path = "crates/cuda-core", version = "0.1.0-dev" }
+maiden-cuda_cuda-kernels = { path = "crates/cuda-kernels", version = "0.1.0-dev" }
+maiden-cuda_cuda-sys = { path = "crates/cuda-sys", version = "0.1.0-dev" }
+maiden-cuda_tensor = { path = "crates/tensor", version = "0.1.0-dev" }
+
 [package]
 name = "maiden-cuda"
 version = "0.1.0-dev"
@@ -16,3 +22,4 @@ keywords = ["cuda", "gpu", "maiden"]
 categories = ["science", "gpu"]
 
 [dependencies]
+maiden-cuda_tensor = { workspace = true }
