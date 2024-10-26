@@ -4,8 +4,10 @@
 extern "C" {
 #endif
 
-int tensor_add(const float *a, const float *b, float *c, int n);
-int tensor_multiply(const float *a, const float *b, float *c, int n);
+void tensor_add(float *output, const float *input1, const float *input2,
+                size_t size);
+void tensor_mul(float *output, const float *input1, const float *input2,
+                size_t size);
 
 #ifdef __cplusplus
 }

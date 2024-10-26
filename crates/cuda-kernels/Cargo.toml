@@ -7,6 +7,7 @@ authors = ["Han Damin <miniex@daminstudio.net>"]
 edition = "2021"
 
 [dependencies]
+cuda-core = { path = "../cuda-core", version = "0.1.0-dev" }
 
 [build-dependencies]
 cmake = "0.1"

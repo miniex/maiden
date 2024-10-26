@@ -6,11 +6,34 @@
 
 ## TODOS
 
-- [ ] Implement PyTorch tensor (partial implementation)
+- [x] Implement PyTorch tensor (partial implementation)
 - [ ] Add CPU operations
 - [ ] Implement basic autograd functionality
 - [ ] Add common neural network layers (Linear, ReLU, etc.)
 - [ ] Set up unit tests for core functionalities
+
+## Getting Started
+
+```rust
+use maiden_cuda::prelude::Tensor;
+
+fn main() {
+    let shape = vec![2, 3, 4];
+    let mut data = Vec::new();
+    for i in 0..24 {
+        data.push(i as f32);
+    }
+
+    let tensor = Tensor::from_vec(data, shape).expect("Failed to create tensor");
+
+    println!("Tensor shape: {:?}", tensor.shape());
+    println!("Tensor strides: {:?}", tensor.strides());
+    println!(
+        "Tensor data: {:?}",
+        tensor.to_vec().expect("Failed to get tensor data")
+    );
+}
+```
 
 ## Development Setup
 
@@ -38,7 +61,7 @@ CompileFlags:
     - "-xcuda"
     - "-std=c++14"
     - "-I/YOUR/CUDA/PATH/include"    # Update this path
-    - "-I../cuda-headers"
+    - "-I../../cuda-headers"
     - "--cuda-gpu-arch=sm_75"
   Compiler: clang
 

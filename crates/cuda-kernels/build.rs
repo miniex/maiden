@@ -46,7 +46,7 @@ fn main() {
     - "-xcuda"
     - "-std=c++14"
     - "-I{}/include"
-    - "-I../cuda-headers"
+    - "-I../../cuda-headers"
     - "--cuda-gpu-arch=sm_75"
   Compiler: clang
 
@@ -66,13 +66,19 @@ Diagnostics:
         .no_build_target(true)
         .build();
 
+    // Search paths
     println!("cargo:rustc-link-search={}/build/lib", dst.display());
     println!("cargo:rustc-link-search={}/build", dst.display());
     println!("cargo:rustc-link-search=native={}/lib", dst.display());
-
     println!("cargo:rustc-link-search={}/lib64", cuda_path);
     println!("cargo:rustc-link-search={}/lib", cuda_path);
 
-    println!("cargo:rustc-link-lib=static=cuda_kernels");
+    // CUDA modules linking
+    let modules = ["tensor_ops"];
+    for module in modules.iter() {
+        println!("cargo:rustc-link-lib=static={}", module);
+    }
+
+    // CUDA runtime linking
     println!("cargo:rustc-link-lib=cudart");
 }

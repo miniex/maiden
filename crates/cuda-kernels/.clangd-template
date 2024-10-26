@@ -9,7 +9,7 @@ CompileFlags:
     - "-xcuda"
     - "-std=c++14"
     - "-I/YOUR/CUDA/PATH/include"
-    - "-I../cuda-headers"
+    - "-I../../cuda-headers"
     - "--cuda-gpu-arch=sm_75"
   Compiler: clang
 

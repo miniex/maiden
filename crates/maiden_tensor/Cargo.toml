@@ -7,3 +7,5 @@ authors = ["Han Damin <miniex@daminstudio.net>"]
 edition = "2021"
 
 [dependencies]
+cuda-core = { path = "../cuda-core", version = "0.1.0-dev" }
+cuda-kernels = { path = "../cuda-kernels", version = "0.1.0-dev" }

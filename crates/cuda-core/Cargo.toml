@@ -7,3 +7,4 @@ authors = ["Han Damin <miniex@daminstudio.net>"]
 edition = "2021"
 
 [dependencies]
+cuda-sys = { path = "../cuda-sys", version = "0.1.0-dev" }

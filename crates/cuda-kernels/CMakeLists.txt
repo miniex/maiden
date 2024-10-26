@@ -27,18 +27,28 @@ include_directories(
 )
 
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
-add_library(cuda_kernels STATIC ${CUDA_SOURCES})
-set_target_properties(cuda_kernels PROPERTIES
-    CUDA_SEPARABLE_COMPILATION ON
-    CUDA_RESOLVE_DEVICE_SYMBOLS ON
-    POSITION_INDEPENDENT_CODE ON
-    LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
-)
 
-target_link_libraries(cuda_kernels
-    PRIVATE
-    ${CUDA_LIBRARIES}
-    ${CUDA_CUDA_LIBRARY}
-    ${CUDA_CUDART_LIBRARY}
-)
+function(add_cuda_module MODULE_PATH)
+    get_filename_component(MODULE_NAME ${MODULE_PATH} NAME)
+    file(GLOB MODULE_SOURCES "${MODULE_PATH}/*.cu")
+    
+    if(MODULE_SOURCES)
+        add_library(${MODULE_NAME} STATIC ${MODULE_SOURCES})
+        set_target_properties(${MODULE_NAME} PROPERTIES
+            CUDA_SEPARABLE_COMPILATION ON
+            CUDA_RESOLVE_DEVICE_SYMBOLS ON
+            POSITION_INDEPENDENT_CODE ON
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+            ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+        )
+        
+        target_link_libraries(${MODULE_NAME}
+            PRIVATE
+            ${CUDA_LIBRARIES}
+            ${CUDA_CUDA_LIBRARY}
+            ${CUDA_CUDART_LIBRARY}
+        )
+    endif()
+endfunction()
+
+add_cuda_module(${CMAKE_CURRENT_SOURCE_DIR}/cuda/tensor_ops)

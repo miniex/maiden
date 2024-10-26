@@ -23,12 +23,16 @@ dependencies = [
 [[package]]
 name = "cuda-core"
 version = "0.1.0-dev"
+dependencies = [
+ "cuda-sys",
+]
 
 [[package]]
 name = "cuda-kernels"
 version = "0.1.0-dev"
 dependencies = [
  "cmake",
+ "cuda-core",
 ]
 
 [[package]]
@@ -54,6 +58,10 @@ dependencies = [
 [[package]]
 name = "maiden_tensor"
 version = "0.1.0-dev"
+dependencies = [
+ "cuda-core",
+ "cuda-kernels",
+]
 
 [[package]]
 name = "shlex"
