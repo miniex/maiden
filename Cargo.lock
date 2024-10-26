@@ -21,6 +21,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "cuda-core"
+version = "0.1.0-dev"
+
+[[package]]
+name = "cuda-kernels"
+version = "0.1.0-dev"
+dependencies = [
+ "cmake",
+]
+
+[[package]]
+name = "cuda-sys"
+version = "0.1.0-dev"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "libc"
 version = "0.2.161"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -30,29 +48,11 @@ checksum = "8e9489c2807c139ffd9c1794f4af0ebe86a828db53ecdc7fea2111d0fed085d1"
 name = "maiden-cuda"
 version = "0.1.0-dev"
 dependencies = [
- "maiden-cuda_tensor",
+ "maiden_tensor",
 ]
 
 [[package]]
-name = "maiden-cuda_cuda-core"
-version = "0.1.0-dev"
-
-[[package]]
-name = "maiden-cuda_cuda-kernels"
-version = "0.1.0-dev"
-dependencies = [
- "cmake",
-]
-
-[[package]]
-name = "maiden-cuda_cuda-sys"
-version = "0.1.0-dev"
-dependencies = [
- "libc",
-]
-
-[[package]]
-name = "maiden-cuda_tensor"
+name = "maiden_tensor"
 version = "0.1.0-dev"
 
 [[package]]

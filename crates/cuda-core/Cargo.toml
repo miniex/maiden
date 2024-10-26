@@ -1,5 +1,5 @@
 [package]
-name = "maiden-cuda_cuda-core"
+name = "cuda-core"
 version = "0.1.0-dev"
 description = ""
 license = "MIT OR Apache-2.0"

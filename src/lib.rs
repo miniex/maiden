@@ -1,1 +1,1 @@
-pub use maiden_cuda_tensor as tensor;
+pub use maiden_tensor as tensor;

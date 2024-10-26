@@ -1,5 +1,5 @@
 [package]
-name = "maiden-cuda_tensor"
+name = "maiden_tensor"
 version = "0.1.0-dev"
 description = ""
 license = "MIT OR Apache-2.0"
