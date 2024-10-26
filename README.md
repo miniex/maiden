@@ -55,6 +55,14 @@
 
 ## Getting Started
 
+### Prerequisites
+
+- CUDA Toolkit
+
+### Example
+
+A simple example demonstrating tensor creation and element-wise addition with shape [2, 3]:
+
 ```rust
 use maiden_cuda::prelude::Tensor;
 
@@ -80,6 +88,8 @@ fn main() {
     // Result: [8.0, 10.0, 12.0, 14.0, 16.0, 18.0]
 }
 ```
+
+For more examples, see [`examples`](examples/).
 
 ## Development Setup
 
