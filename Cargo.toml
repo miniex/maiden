@@ -16,7 +16,7 @@ keywords = ["cuda", "gpu", "maiden"]
 categories = ["science", "gpu"]
 
 [dependencies]
-maiden_tensor = { path = "crates/maiden_tensor", version = "0.1.0-dev" }
+maiden_internal = { path = "crates/maiden_internal", version = "0.1.0-dev" }
 
 [[example]]
 name = "tensor_basic"
