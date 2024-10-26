@@ -18,20 +18,25 @@
 use maiden_cuda::prelude::Tensor;
 
 fn main() {
-    let shape = vec![2, 3, 4];
-    let mut data = Vec::new();
-    for i in 0..24 {
-        data.push(i as f32);
-    }
+    let tensor1 = Tensor::from_vec(
+        vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+        vec![2, 3]
+    ).expect("Failed to create tensor1");
 
-    let tensor = Tensor::from_vec(data, shape).expect("Failed to create tensor");
+    let tensor2 = Tensor::from_vec(
+        vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0],
+        vec![2, 3]
+    ).expect("Failed to create tensor2");
 
-    println!("Tensor shape: {:?}", tensor.shape());
-    println!("Tensor strides: {:?}", tensor.strides());
-    println!(
-        "Tensor data: {:?}",
-        tensor.to_vec().expect("Failed to get tensor data")
-    );
+    // Add the tensors
+    let result = tensor1.add(&tensor2).expect("Failed to add tensors");
+    
+    // Print the result
+    println!("Shape: {:?}", result.shape());
+    println!("Result: {:?}", result.to_vec().expect("Failed to get result data"));
+    // Output:
+    // Shape: [2, 3]
+    // Result: [8.0, 10.0, 12.0, 14.0, 16.0, 18.0]
 }
 ```
 
