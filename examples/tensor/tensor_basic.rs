@@ -1,22 +1,39 @@
 use maiden_cuda::prelude::Tensor;
 
 fn main() {
-    let shape = vec![2, 3, 4];
-    let mut data1 = Vec::new();
-    for i in 0..24 {
-        data1.push(i as f32);
-    }
-    let tensor1 = Tensor::from_vec(data1, shape.clone()).expect("Failed to create tensor1");
+    // Create 3D tensors with shape [2, 3, 4]
+    let tensor1 = Tensor::new(vec![
+        vec![
+            vec![0.0, 1.0, 2.0, 3.0],
+            vec![4.0, 5.0, 6.0, 7.0],
+            vec![8.0, 9.0, 10.0, 11.0],
+        ],
+        vec![
+            vec![12.0, 13.0, 14.0, 15.0],
+            vec![16.0, 17.0, 18.0, 19.0],
+            vec![20.0, 21.0, 22.0, 23.0],
+        ],
+    ])
+    .expect("Failed to create tensor1");
 
-    let mut data2 = Vec::new();
-    for i in 0..24 {
-        data2.push((i as f32) * 2.0);
-    }
-    let tensor2 = Tensor::from_vec(data2, shape).expect("Failed to create tensor2");
+    let tensor2 = Tensor::new(vec![
+        vec![
+            vec![0.0, 2.0, 4.0, 6.0],
+            vec![8.0, 10.0, 12.0, 14.0],
+            vec![16.0, 18.0, 20.0, 22.0],
+        ],
+        vec![
+            vec![24.0, 26.0, 28.0, 30.0],
+            vec![32.0, 34.0, 36.0, 38.0],
+            vec![40.0, 42.0, 44.0, 46.0],
+        ],
+    ])
+    .expect("Failed to create tensor2");
 
     println!("Tensor 1:");
     println!("Shape: {:?}", tensor1.shape());
     println!("Strides: {:?}", tensor1.strides());
+    println!("Number of dimensions: {}", tensor1.ndim());
     println!(
         "Data: {:?}",
         tensor1.to_vec().expect("Failed to get tensor1 data")
@@ -25,6 +42,7 @@ fn main() {
     println!("\nTensor 2:");
     println!("Shape: {:?}", tensor2.shape());
     println!("Strides: {:?}", tensor2.strides());
+    println!("Number of dimensions: {}", tensor2.ndim());
     println!(
         "Data: {:?}",
         tensor2.to_vec().expect("Failed to get tensor2 data")
@@ -59,3 +77,5 @@ fn main() {
     println!("Last element: {} + {} = {}", 23.0, 46.0, sum_data[23]);
     println!("Last element: {} * {} = {}", 23.0, 46.0, mul_data[23]);
 }
+
+

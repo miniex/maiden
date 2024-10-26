@@ -61,31 +61,24 @@
 
 ### Example
 
-A simple example demonstrating tensor creation and element-wise addition with shape [2, 3]:
-
 ```rust
 use maiden_cuda::prelude::Tensor;
 
 fn main() {
-    let tensor1 = Tensor::from_vec(
-        vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
-        vec![2, 3]
-    ).expect("Failed to create tensor1");
+    let tensor1 = Tensor::new(vec![
+        vec![1.0, 2.0, 3.0],
+        vec![4.0, 5.0, 6.0],
+    ]).expect("Failed to create tensor1");
 
-    let tensor2 = Tensor::from_vec(
-        vec![7.0, 8.0, 9.0, 10.0, 11.0, 12.0],
-        vec![2, 3]
-    ).expect("Failed to create tensor2");
+    let tensor2 = Tensor::new(vec![
+        vec![7.0, 8.0, 9.0],
+        vec![10.0, 11.0, 12.0],
+    ]).expect("Failed to create tensor2");
 
-    // Add the tensors
     let result = tensor1.add(&tensor2).expect("Failed to add tensors");
     
-    // Print the result
     println!("Shape: {:?}", result.shape());
     println!("Result: {:?}", result.to_vec().expect("Failed to get result data"));
-    // Output:
-    // Shape: [2, 3]
-    // Result: [8.0, 10.0, 12.0, 14.0, 16.0, 18.0]
 }
 ```
 
