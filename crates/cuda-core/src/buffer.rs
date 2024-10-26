@@ -18,7 +18,7 @@ impl fmt::Debug for CudaBuffer {
 impl CudaBuffer {
     pub fn new(size: usize) -> CudaResult<Self> {
         let mut ptr = std::ptr::null_mut();
-        let result = unsafe { cuda_sys::cudaMalloc(&mut ptr, size) };
+        let result = unsafe { maiden_cuda_sys::cudaMalloc(&mut ptr, size) };
 
         if result != 0 {
             return Err(CudaError::AllocationFailed);
@@ -36,11 +36,11 @@ impl CudaBuffer {
         }
 
         let result = unsafe {
-            cuda_sys::cudaMemcpy(
+            maiden_cuda_sys::cudaMemcpy(
                 self.ptr.as_ptr() as *mut std::ffi::c_void,
                 data.as_ptr() as *const std::ffi::c_void,
                 mem::size_of_val(data),
-                cuda_sys::cudaMemcpyKind::cudaMemcpyHostToDevice,
+                maiden_cuda_sys::cudaMemcpyKind::cudaMemcpyHostToDevice,
             )
         };
 
@@ -57,11 +57,11 @@ impl CudaBuffer {
         }
 
         unsafe {
-            let result = cuda_sys::cudaMemcpy(
+            let result = maiden_cuda_sys::cudaMemcpy(
                 data.as_mut_ptr() as *mut std::ffi::c_void,
                 self.ptr.as_ptr() as *const std::ffi::c_void,
                 mem::size_of_val(data),
-                cuda_sys::cudaMemcpyKind::cudaMemcpyDeviceToHost,
+                maiden_cuda_sys::cudaMemcpyKind::cudaMemcpyDeviceToHost,
             );
 
             if result != 0 {
@@ -88,7 +88,7 @@ impl CudaBuffer {
 impl Drop for CudaBuffer {
     fn drop(&mut self) {
         unsafe {
-            cuda_sys::cudaFree(self.ptr.as_ptr() as *mut std::ffi::c_void);
+            maiden_cuda_sys::cudaFree(self.ptr.as_ptr() as *mut std::ffi::c_void);
         }
     }
 }

@@ -1,4 +1,4 @@
-use cuda_core::prelude::CudaResult;
+use maiden_cuda_core::prelude::CudaResult;
 
 #[link(name = "tensor_ops")]
 extern "C" {
@@ -106,7 +106,7 @@ pub unsafe fn cuda_tensor_matmul(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cuda_core::prelude::CudaBuffer;
+    use maiden_cuda_core::prelude::CudaBuffer;
 
     #[test]
     fn test_tensor_add() -> CudaResult<()> {

@@ -1,8 +1,8 @@
 mod convert;
 
 use convert::TensorData;
-use cuda_core::prelude::{CudaBuffer, CudaError, CudaResult};
-use cuda_kernels::tensor_ops::{cuda_tensor_add, cuda_tensor_matmul, cuda_tensor_mul};
+use maiden_cuda_core::prelude::{CudaBuffer, CudaError, CudaResult};
+use maiden_cuda_kernels::tensor_ops::{cuda_tensor_add, cuda_tensor_matmul, cuda_tensor_mul};
 use std::fmt;
 use std::sync::Arc;
 
