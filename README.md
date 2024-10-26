@@ -78,7 +78,7 @@ fn main() {
     let result = tensor1.add(&tensor2).expect("Failed to add tensors");
     
     println!("Shape: {:?}", result.shape());
-    println!("Result: {:?}", result.to_vec().expect("Failed to get result data"));
+    println!("Result:\n{}", result);
 }
 ```
 

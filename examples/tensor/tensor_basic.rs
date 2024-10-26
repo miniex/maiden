@@ -34,37 +34,23 @@ fn main() {
     println!("Shape: {:?}", tensor1.shape());
     println!("Strides: {:?}", tensor1.strides());
     println!("Number of dimensions: {}", tensor1.ndim());
-    println!(
-        "Data: {:?}",
-        tensor1.to_vec().expect("Failed to get tensor1 data")
-    );
+    println!("Data:\n{}", tensor1);
 
     println!("\nTensor 2:");
     println!("Shape: {:?}", tensor2.shape());
     println!("Strides: {:?}", tensor2.strides());
     println!("Number of dimensions: {}", tensor2.ndim());
-    println!(
-        "Data: {:?}",
-        tensor2.to_vec().expect("Failed to get tensor2 data")
-    );
+    println!("Data:\n{}", tensor2);
 
     let sum_tensor = tensor1.add(&tensor2).expect("Failed to add tensors");
     println!("\nAddition Result:");
     println!("Shape: {:?}", sum_tensor.shape());
-    println!(
-        "Data: {:?}",
-        sum_tensor.to_vec().expect("Failed to get sum data")
-    );
+    println!("Data:\n{}", sum_tensor);
 
     let mul_tensor = tensor1.mul(&tensor2).expect("Failed to multiply tensors");
     println!("\nMultiplication Result:");
     println!("Shape: {:?}", mul_tensor.shape());
-    println!(
-        "Data: {:?}",
-        mul_tensor
-            .to_vec()
-            .expect("Failed to get multiplication data")
-    );
+    println!("Data:\n{}", mul_tensor);
 
     let sum_data = sum_tensor.to_vec().expect("Failed to get sum data");
     let mul_data = mul_tensor
@@ -77,5 +63,3 @@ fn main() {
     println!("Last element: {} + {} = {}", 23.0, 46.0, sum_data[23]);
     println!("Last element: {} * {} = {}", 23.0, 46.0, mul_data[23]);
 }
-
-
