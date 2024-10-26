@@ -2,7 +2,7 @@ mod convert;
 
 use convert::TensorData;
 use cuda_core::prelude::{CudaBuffer, CudaError, CudaResult};
-use cuda_kernels::tensor_ops::{cuda_tensor_add, cuda_tensor_mul};
+use cuda_kernels::tensor_ops::{cuda_tensor_add, cuda_tensor_matmul, cuda_tensor_mul};
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -44,6 +44,14 @@ impl Tensor {
 
     pub fn size(&self, dim: usize) -> Option<usize> {
         self.shape.get(dim).copied()
+    }
+
+    pub fn shape(&self) -> &[usize] {
+        &self.shape
+    }
+
+    pub fn strides(&self) -> &[usize] {
+        &self.strides
     }
 
     pub fn to_vec(&self) -> CudaResult<Vec<f32>> {
@@ -111,12 +119,41 @@ impl Tensor {
         Ok(result)
     }
 
-    pub fn shape(&self) -> &[usize] {
-        &self.shape
-    }
+    pub fn matmul(&self, other: &Tensor) -> CudaResult<Tensor> {
+        if self.shape.len() != 2 || other.shape.len() != 2 {
+            return Err(CudaError::ShapeMismatch);
+        }
 
-    pub fn strides(&self) -> &[usize] {
-        &self.strides
+        let m = self.shape[0];
+        let k = self.shape[1];
+
+        if k != other.shape[0] {
+            return Err(CudaError::ShapeMismatch);
+        }
+        let n = other.shape[1];
+
+        let result_shape = vec![m, n];
+        let result_strides = Self::compute_strides(&result_shape);
+        let result_size = m * n * std::mem::size_of::<f32>();
+
+        let mut result = Self {
+            buffer: Arc::new(CudaBuffer::new(result_size)?),
+            shape: result_shape,
+            strides: result_strides,
+        };
+
+        unsafe {
+            cuda_tensor_matmul(
+                Arc::get_mut(&mut result.buffer).unwrap().as_mut_ptr(),
+                self.buffer.as_ptr(),
+                other.buffer.as_ptr(),
+                m as i32,
+                n as i32,
+                k as i32,
+            )?;
+        }
+
+        Ok(result)
     }
 }
 
@@ -177,6 +214,108 @@ mod tests {
             tensor.to_vec()?,
             vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
         );
+        Ok(())
+    }
+
+    #[test]
+    fn test_tensor_add() -> CudaResult<()> {
+        let tensor1 = Tensor::new(vec![vec![1.0, 2.0], vec![3.0, 4.0]])?;
+        let tensor2 = Tensor::new(vec![vec![5.0, 6.0], vec![7.0, 8.0]])?;
+
+        let result = tensor1.add(&tensor2)?;
+        assert_eq!(result.shape(), &[2, 2]);
+        assert_eq!(result.to_vec()?, [6.0, 8.0, 10.0, 12.0]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_tensor_mul() -> CudaResult<()> {
+        let tensor1 = Tensor::new(vec![vec![2.0, 3.0], vec![4.0, 5.0]])?;
+        let tensor2 = Tensor::new(vec![vec![3.0, 2.0], vec![1.0, 4.0]])?;
+
+        let result = tensor1.mul(&tensor2)?;
+        assert_eq!(result.shape(), &[2, 2]);
+        assert_eq!(result.to_vec()?, [6.0, 6.0, 4.0, 20.0]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_matrix_multiplication() -> CudaResult<()> {
+        let data1 = vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]];
+        let tensor1 = Tensor::new(data1)?;
+
+        let data2 = vec![vec![7.0, 8.0], vec![9.0, 10.0], vec![11.0, 12.0]];
+        let tensor2 = Tensor::new(data2)?;
+
+        let result = tensor1.matmul(&tensor2)?;
+
+        // [1*7 + 2*9 + 3*11, 1*8 + 2*10 + 3*12]
+        // [4*7 + 5*9 + 6*11, 4*8 + 5*10 + 6*12]
+        assert_eq!(result.shape(), &[2, 2]);
+
+        let result_data = result.to_vec()?;
+        let expected = [
+            1.0 * 7.0 + 2.0 * 9.0 + 3.0 * 11.0,
+            1.0 * 8.0 + 2.0 * 10.0 + 3.0 * 12.0,
+            4.0 * 7.0 + 5.0 * 9.0 + 6.0 * 11.0,
+            4.0 * 8.0 + 5.0 * 10.0 + 6.0 * 12.0,
+        ];
+
+        assert_eq!(result_data.len(), expected.len());
+        for (actual, expected) in result_data.iter().zip(expected.iter()) {
+            assert!(
+                (actual - expected).abs() < 1e-5,
+                "Expected {}, got {}",
+                expected,
+                actual
+            );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_matrix_multiplication_invalid_shape() -> CudaResult<()> {
+        let data1 = vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]];
+        let tensor1 = Tensor::new(data1)?;
+
+        let data2 = vec![vec![7.0, 8.0], vec![9.0, 10.0]];
+        let tensor2 = Tensor::new(data2)?;
+
+        assert!(matches!(
+            tensor1.matmul(&tensor2),
+            Err(CudaError::ShapeMismatch)
+        ));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_large_matrix_multiplication() -> CudaResult<()> {
+        let size = 32;
+
+        let data1 = vec![vec![1.0; size]; size];
+        let data2 = vec![vec![2.0; size]; size];
+
+        let tensor1 = Tensor::new(data1)?;
+        let tensor2 = Tensor::new(data2)?;
+
+        let result = tensor1.matmul(&tensor2)?;
+
+        assert_eq!(result.shape(), &[size, size]);
+
+        let result_data = result.to_vec()?;
+        let expected_value = 2.0 * size as f32;
+
+        for val in result_data {
+            assert!(
+                (val - expected_value).abs() < 1e-3,
+                "Expected {}, got {}",
+                expected_value,
+                val
+            );
+        }
+
         Ok(())
     }
 }
