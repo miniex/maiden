@@ -13,7 +13,7 @@ repository = "https://github.com/miniex/maiden-cuda"
 documentation = "https://docs.rs/maiden-cuda"
 readme = "README.md"
 keywords = ["cuda", "gpu", "maiden"]
-categories = ["science", "gpu"]
+categories = ["science", "development-tools"]
 
 [dependencies]
 maiden_internal = { path = "crates/maiden_internal", version = "0.0.1" }
