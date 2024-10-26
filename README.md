@@ -4,6 +4,14 @@
     <strong>🚧 This project is for personal learning and testing purposes, so it may not function properly. 🚧</strong>
 </div>
 
+## TODOS
+
+- [ ] Implement PyTorch tensor (partial implementation)
+- [ ] Add CPU operations
+- [ ] Implement basic autograd functionality
+- [ ] Add common neural network layers (Linear, ReLU, etc.)
+- [ ] Set up unit tests for core functionalities
+
 ## Development Setup
 
 ### Prerequisites
