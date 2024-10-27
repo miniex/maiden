@@ -13,6 +13,37 @@
 
 - CUDA Toolkit
 
+### Details
+
+#### Tensor
+
+<details>
+  <summary>tensor</summary>
+</details>
+
+#### Module
+
+<details>
+  <summary>nn::layer</summary>
+
+<!-- LAYERS -->
+- **Linear** - A module that applies a linear transformation to the incoming data: y = xW^T + b. The parameters are: weight of shape (out_features, in_features) and an optional bias of shape (out_features)
+- **Bilinear** - A module that applies a bilinear transformation to the incoming data: y = x1 * A * x2 + b. The parameters are: weight of shape (out_features, in1_features, in2_features) and an optional bias of shape (out_features)
+<!-- /LAYERS -->
+
+</details>
+
+<details>
+  <summary>nn::activation</summary>
+
+<!-- ACTIVATIONS -->
+- **ReLU** - A module that applies the rectified linear unit function element-wise: ReLU(x) = max(0, x). Can be done in-place to save memory.
+- **Sigmoid** - A module that applies the sigmoid function element-wise: Sigmoid(x) = 1 / (1 + exp(-x)). Can be done in-place to save memory.
+- **Tanh** - A module that applies the hyperbolic tangent function element-wise: Tanh(x) = (exp(x) - exp(-x)) / (exp(x) + exp(-x)). Can be done in-place to save memory.
+<!-- /ACTIVATIONS -->
+
+</details>
+
 ### Example
 
 How to use Tensor:
