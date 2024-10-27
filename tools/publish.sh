@@ -1,9 +1,9 @@
 #!/bin/bash
 
 crates=(
-    maiden_cuda-sys
-    maiden_cuda-core
-    maiden_cuda-kernels
+    cuda-sys
+    cuda-core
+    cuda-kernels
     maiden_macro_utils
     maiden_nn/macros
     maiden_tensor
