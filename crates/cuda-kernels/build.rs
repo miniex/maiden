@@ -73,11 +73,11 @@ Diagnostics:
     println!("cargo:rustc-link-search={}/lib64", cuda_path);
     println!("cargo:rustc-link-search={}/lib", cuda_path);
 
-    // CUDA modules linking
-    let modules = ["tensor_ops"];
-    for module in modules.iter() {
-        println!("cargo:rustc-link-lib=static={}", module);
-    }
+    // CUDA modules linking - key changes here
+    println!("cargo:rustc-link-arg=-Wl,--whole-archive");
+    println!("cargo:rustc-link-lib=static=nn_ops");
+    println!("cargo:rustc-link-lib=static=tensor_ops");
+    println!("cargo:rustc-link-arg=-Wl,--no-whole-archive");
 
     // CUDA runtime linking
     println!("cargo:rustc-link-lib=cudart");

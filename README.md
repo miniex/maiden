@@ -1,5 +1,5 @@
 <div align="center">
-    <h1>Maiden CUDA</h1>
+    <h1>Maiden</h1>
     <p>Rust-based CUDA library designed for learning purposes and building my AI engines named Maiden Engine</p>
     <strong>🚧 This project is for personal learning and testing purposes, so it may not function properly. 🚧</strong>
 </div>

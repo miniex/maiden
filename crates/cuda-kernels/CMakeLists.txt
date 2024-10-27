@@ -31,7 +31,7 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -O3")
 function(add_cuda_module MODULE_PATH)
     get_filename_component(MODULE_NAME ${MODULE_PATH} NAME)
     file(GLOB MODULE_SOURCES "${MODULE_PATH}/*.cu")
-    
+
     if(MODULE_SOURCES)
         add_library(${MODULE_NAME} STATIC ${MODULE_SOURCES})
         set_target_properties(${MODULE_NAME} PROPERTIES
@@ -41,7 +41,7 @@ function(add_cuda_module MODULE_PATH)
             LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
             ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
         )
-        
+
         target_link_libraries(${MODULE_NAME}
             PRIVATE
             ${CUDA_LIBRARIES}
@@ -51,4 +51,5 @@ function(add_cuda_module MODULE_PATH)
     endif()
 endfunction()
 
+add_cuda_module(${CMAKE_CURRENT_SOURCE_DIR}/cuda/nn_ops)
 add_cuda_module(${CMAKE_CURRENT_SOURCE_DIR}/cuda/tensor_ops)

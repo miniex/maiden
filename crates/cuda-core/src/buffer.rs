@@ -1,6 +1,7 @@
 use crate::error::{CudaError, CudaResult};
 use std::{fmt, mem, ptr::NonNull};
 
+#[derive(Clone)]
 pub struct CudaBuffer {
     ptr: NonNull<f32>,
     size: usize,
@@ -88,7 +89,10 @@ impl CudaBuffer {
 impl Drop for CudaBuffer {
     fn drop(&mut self) {
         unsafe {
-            maiden_cuda_sys::cudaFree(self.ptr.as_ptr() as *mut std::ffi::c_void);
+            let result = maiden_cuda_sys::cudaFree(self.ptr.as_ptr() as *mut std::ffi::c_void);
+            if result != 0 {
+                eprintln!("Warning: cudaFree failed for CudaBuffer during drop");
+            }
         }
     }
 }

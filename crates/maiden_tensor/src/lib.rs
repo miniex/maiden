@@ -3,6 +3,8 @@ mod convert;
 use convert::TensorData;
 use maiden_cuda_core::prelude::{CudaBuffer, CudaError, CudaResult};
 use maiden_cuda_kernels::tensor_ops::{cuda_tensor_add, cuda_tensor_matmul, cuda_tensor_mul};
+use rand::prelude::*;
+use rand_distr::Normal;
 use std::fmt;
 use std::sync::Arc;
 
@@ -56,11 +58,61 @@ impl Tensor {
         Ok(tensor)
     }
 
+    pub fn from_vec<T: Into<Vec<f32>>>(vec: T, shape: &[usize]) -> CudaResult<Self> {
+        let vec = vec.into();
+        let total_size: usize = shape.iter().product();
+
+        if vec.len() != total_size {
+            return Err(CudaError::ShapeMismatch);
+        }
+
+        let size = total_size * std::mem::size_of::<f32>();
+        let buffer = Arc::new(CudaBuffer::new(size)?);
+        let strides = Self::compute_strides(shape);
+
+        let mut tensor = Self {
+            buffer,
+            shape: shape.to_vec(),
+            strides,
+        };
+
+        if let Some(buffer) = Arc::get_mut(&mut tensor.buffer) {
+            buffer.copy_from_host(&vec)?;
+        } else {
+            return Err(CudaError::AllocationFailed);
+        }
+
+        Ok(tensor)
+    }
+
+    pub fn data(&self) -> &CudaBuffer {
+        &self.buffer
+    }
+
+    pub fn data_mut(&mut self) -> &mut CudaBuffer {
+        if Arc::strong_count(&self.buffer) == 1 {
+            Arc::get_mut(&mut self.buffer).unwrap()
+        } else {
+            let new_buffer = self.buffer.as_ref().clone();
+            self.buffer = Arc::new(new_buffer);
+            Arc::get_mut(&mut self.buffer).unwrap()
+        }
+    }
+
+    pub fn zeros(shape: &[usize]) -> CudaResult<Self> {
+        let size = shape.iter().product::<usize>();
+        let data = vec![0.0f32; size];
+        Self::from_vec(data, shape)
+    }
+
     pub fn ndim(&self) -> usize {
         self.shape.len()
     }
 
-    pub fn size(&self, dim: usize) -> Option<usize> {
+    pub fn size(&self) -> usize {
+        self.shape.iter().product()
+    }
+    pub fn size_dim(&self, dim: usize) -> Option<usize> {
         self.shape.get(dim).copied()
     }
 
@@ -70,6 +122,10 @@ impl Tensor {
 
     pub fn strides(&self) -> &[usize] {
         &self.strides
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.shape.iter().any(|&dim| dim == 0)
     }
 
     pub fn to_vec(&self) -> CudaResult<Vec<f32>> {
@@ -85,6 +141,43 @@ impl Tensor {
             strides[i] = strides[i + 1] * shape[i + 1];
         }
         strides
+    }
+
+    pub fn reshape(&mut self, new_shape: &[usize]) -> CudaResult<()> {
+        let new_size: usize = new_shape.iter().product();
+        if new_size != self.size() {
+            return Err(CudaError::ShapeMismatch);
+        }
+
+        self.shape = new_shape.to_vec();
+        self.strides = Self::compute_strides(&self.shape);
+        Ok(())
+    }
+
+    pub fn randn(shape: &[usize]) -> CudaResult<Self> {
+        let size = shape.iter().product::<usize>();
+        let mut rng = rand::thread_rng();
+        let normal = Normal::new(0.0, 1.0).unwrap();
+        let data: Vec<f32> = (0..size).map(|_| normal.sample(&mut rng) as f32).collect();
+        Self::from_vec(data, shape)
+    }
+
+    pub fn mul_scalar(&self, scalar: f32) -> CudaResult<Self> {
+        let mut result = Self {
+            buffer: Arc::new(CudaBuffer::new(self.buffer.len())?),
+            shape: self.shape.clone(),
+            strides: self.strides.clone(),
+        };
+
+        let scaled_data: Vec<f32> = self.to_vec()?.iter().map(|x| x * scalar).collect();
+
+        if let Some(buffer) = Arc::get_mut(&mut result.buffer) {
+            buffer.copy_from_host(&scaled_data)?;
+        } else {
+            return Err(CudaError::AllocationFailed);
+        }
+
+        Ok(result)
     }
 
     pub fn add(&self, other: &Tensor) -> CudaResult<Tensor> {
@@ -475,6 +568,66 @@ mod tests {
                 val
             );
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_from_vec() -> CudaResult<()> {
+        // 1D tensor
+        let tensor = Tensor::from_vec(vec![1.0, 2.0, 3.0], &[3])?;
+        assert_eq!(tensor.shape(), &[3]);
+        assert_eq!(tensor.to_vec()?, vec![1.0, 2.0, 3.0]);
+
+        // 2D tensor
+        let tensor = Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], &[2, 2])?;
+        assert_eq!(tensor.shape(), &[2, 2]);
+        assert_eq!(tensor.to_vec()?, vec![1.0, 2.0, 3.0, 4.0]);
+
+        // Shape mismatch should fail
+        assert!(matches!(
+            Tensor::from_vec(vec![1.0, 2.0], &[3]),
+            Err(CudaError::ShapeMismatch)
+        ));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_from_vec_multi_dimensional() -> CudaResult<()> {
+        // 3D tensor
+        let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
+        let tensor = Tensor::from_vec(data, &[2, 2, 2])?;
+        assert_eq!(tensor.shape(), &[2, 2, 2]);
+
+        let result = tensor.to_vec()?;
+        assert_eq!(result.len(), 8);
+        assert_eq!(result, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_randn() -> CudaResult<()> {
+        let shape = &[3, 3];
+        let tensor = Tensor::randn(shape)?;
+
+        assert_eq!(tensor.shape(), shape);
+        assert_eq!(tensor.ndim(), shape.len());
+
+        assert_eq!(tensor.to_vec()?.len(), shape.iter().product());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_mul_scalar() -> CudaResult<()> {
+        let tensor = Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], &[2, 2])?;
+        let scalar = 2.0;
+        let result = tensor.mul_scalar(scalar)?;
+
+        let expected = vec![2.0, 4.0, 6.0, 8.0];
+        assert_eq!(result.to_vec()?, expected);
 
         Ok(())
     }
