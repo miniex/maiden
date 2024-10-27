@@ -1,6 +1,6 @@
-use maiden_cuda::prelude::Tensor;
+use maiden_cuda::prelude::*;
 
-fn main() {
+fn main() -> CudaResult<()> {
     // Create 3D tensors with shape [2, 3, 4]
     let tensor1 = Tensor::new(vec![
         vec![
@@ -13,8 +13,7 @@ fn main() {
             vec![16.0, 17.0, 18.0, 19.0],
             vec![20.0, 21.0, 22.0, 23.0],
         ],
-    ])
-    .expect("Failed to create tensor1");
+    ])?;
 
     let tensor2 = Tensor::new(vec![
         vec![
@@ -27,8 +26,7 @@ fn main() {
             vec![32.0, 34.0, 36.0, 38.0],
             vec![40.0, 42.0, 44.0, 46.0],
         ],
-    ])
-    .expect("Failed to create tensor2");
+    ])?;
 
     println!("Tensor 1:");
     println!("Shape: {:?}", tensor1.shape());
@@ -42,24 +40,24 @@ fn main() {
     println!("Number of dimensions: {}", tensor2.ndim());
     println!("Data:\n{}", tensor2);
 
-    let sum_tensor = tensor1.add(&tensor2).expect("Failed to add tensors");
+    let sum_tensor = tensor1.add(&tensor2)?;
     println!("\nAddition Result:");
     println!("Shape: {:?}", sum_tensor.shape());
     println!("Data:\n{}", sum_tensor);
 
-    let mul_tensor = tensor1.mul(&tensor2).expect("Failed to multiply tensors");
+    let mul_tensor = tensor1.mul(&tensor2)?;
     println!("\nMultiplication Result:");
     println!("Shape: {:?}", mul_tensor.shape());
     println!("Data:\n{}", mul_tensor);
 
-    let sum_data = sum_tensor.to_vec().expect("Failed to get sum data");
-    let mul_data = mul_tensor
-        .to_vec()
-        .expect("Failed to get multiplication data");
+    let sum_data = sum_tensor.to_vec()?;
+    let mul_data = mul_tensor.to_vec()?;
 
     println!("\nValidation:");
     println!("First element: {} + {} = {}", 0.0, 0.0, sum_data[0]);
     println!("First element: {} * {} = {}", 0.0, 0.0, mul_data[0]);
     println!("Last element: {} + {} = {}", 23.0, 46.0, sum_data[23]);
     println!("Last element: {} * {} = {}", 23.0, 46.0, mul_data[23]);
+
+    Ok(())
 }
