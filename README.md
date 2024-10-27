@@ -2,6 +2,9 @@
     <h1>Maiden CUDA</h1>
     <p>Rust-based CUDA library designed for learning purposes and building my AI engines named Maiden Engine</p>
     <strong>🚧 This project is for personal learning and testing purposes, so it may not function properly. 🚧</strong>
+    <h3>
+        <a href="TODOS.md">TODOS</a>
+    </h3>
 </div>
 
 ## Getting Started
@@ -41,7 +44,7 @@ For more examples, see [`examples`](examples/).
 
 - Rust
 - CUDA Toolkit
-- Cmake
+- CMake
 - clangd
 
 

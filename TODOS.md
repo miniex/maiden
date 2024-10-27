@@ -17,7 +17,7 @@
 
 ### Phase 1: Core Operations (High Priority)
 - [x] Matrix multiplication (matmul)
-- [ ] Activation functions (ReLU, Sigmoid, Tanh)
+- [x] Activation functions (ReLU, Sigmoid, Tanh)
 - [ ] Backpropagation and autograd system
 - [ ] Convolution operations (primarily conv2d)
 - [ ] Batch normalization
