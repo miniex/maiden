@@ -1,13 +1,13 @@
 [package]
 name = "maiden_cuda-kernels"
-version = "0.0.1"
+version = "0.0.2-dev"
 description = "Maiden CUDA Kernels"
 license = "MIT OR Apache-2.0"
 authors = ["Han Damin <miniex@daminstudio.net>"]
 edition = "2021"
 
 [dependencies]
-maiden_cuda-core = { path = "../cuda-core", version = "0.0.1" }
+maiden_cuda-core = { path = "../cuda-core", version = "0.0.2-dev" }
 
 [build-dependencies]
 cmake = "0.1"

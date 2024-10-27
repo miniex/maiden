@@ -1,10 +1,10 @@
 [package]
 name = "maiden_cuda-core"
-version = "0.0.1"
+version = "0.0.2-dev"
 description = "Maiden CUDA Core"
 license = "MIT OR Apache-2.0"
 authors = ["Han Damin <miniex@daminstudio.net>"]
 edition = "2021"
 
 [dependencies]
-maiden_cuda-sys = { path = "../cuda-sys", version = "0.0.1" }
+maiden_cuda-sys = { path = "../cuda-sys", version = "0.0.2-dev" }

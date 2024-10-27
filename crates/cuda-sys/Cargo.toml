@@ -1,6 +1,6 @@
 [package]
 name = "maiden_cuda-sys"
-version = "0.0.1"
+version = "0.0.2-dev"
 description = "Maiden CUDA System"
 license = "MIT OR Apache-2.0"
 authors = ["Han Damin <miniex@daminstudio.net>"]

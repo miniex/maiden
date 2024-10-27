@@ -3,7 +3,7 @@ members = ["crates/*"]
 
 [package]
 name = "maiden-cuda"
-version = "0.0.1"
+version = "0.0.2-dev"
 description = "CUDA implementation for Maiden Engine"
 license = "MIT OR Apache-2.0"
 authors = ["Han Damin <miniex@daminstudio.net>"]
@@ -16,7 +16,7 @@ keywords = ["cuda", "gpu", "maiden"]
 categories = ["science", "development-tools"]
 
 [dependencies]
-maiden_internal = { path = "crates/maiden_internal", version = "0.0.1" }
+maiden_internal = { path = "crates/maiden_internal", version = "0.0.2-dev" }
 
 [[example]]
 name = "tensor_basic"
@@ -25,3 +25,7 @@ path = "examples/tensor/tensor_basic.rs"
 [[example]]
 name = "tensor_matmul"
 path = "examples/tensor/tensor_matmul.rs"
+
+[[example]]
+name = "nn_linear"
+path = "examples/nn/nn_linear.rs"

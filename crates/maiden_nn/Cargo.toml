@@ -1,5 +1,5 @@
 [package]
-name = "maiden_tensor"
+name = "maiden_nn"
 version = "0.0.2-dev"
 description = "Maiden CUDA Tensor"
 license = "MIT OR Apache-2.0"
@@ -9,3 +9,4 @@ edition = "2021"
 [dependencies]
 maiden_cuda-core = { path = "../cuda-core", version = "0.0.2-dev" }
 maiden_cuda-kernels = { path = "../cuda-kernels", version = "0.0.2-dev" }
+maiden_tensor = { path = "../maiden_tensor", version = "0.0.2-dev" }

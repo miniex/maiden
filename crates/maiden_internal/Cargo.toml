@@ -1,12 +1,13 @@
 [package]
 name = "maiden_internal"
-version = "0.0.1"
+version = "0.0.2-dev"
 description = "Maiden CUDA Internal"
 license = "MIT OR Apache-2.0"
 authors = ["Han Damin <miniex@daminstudio.net>"]
 edition = "2021"
 
 [dependencies]
-maiden_cuda-core = { path = "../cuda-core", version = "0.0.1" }
-maiden_cuda-kernels = { path = "../cuda-kernels", version = "0.0.1" }
-maiden_tensor = { path = "../maiden_tensor", version = "0.0.1" }
+maiden_cuda-core = { path = "../cuda-core", version = "0.0.2-dev" }
+maiden_cuda-kernels = { path = "../cuda-kernels", version = "0.0.2-dev" }
+maiden_nn = { path = "../maiden_nn", version = "0.0.2-dev" }
+maiden_tensor = { path = "../maiden_tensor", version = "0.0.2-dev" }
