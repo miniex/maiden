@@ -20,7 +20,7 @@
 ## Roadmap
 
 ### Phase 1: Core Operations (High Priority)
-- [ ] Matrix multiplication (matmul)
+- [x] Matrix multiplication (matmul)
 - [ ] Activation functions (ReLU, Sigmoid, Tanh)
 - [ ] Backpropagation and autograd system
 - [ ] Convolution operations (primarily conv2d)
