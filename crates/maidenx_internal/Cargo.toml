@@ -1,6 +1,6 @@
 [package]
 name = "maidenx_internal"
-version = "0.0.3"
+version = "0.0.4-dev"
 description = "MaidenX Internal"
 license = "MIT OR Apache-2.0"
 authors = ["Han Damin <miniex@daminstudio.net>"]
@@ -9,7 +9,7 @@ publish = true
 repository = "https://github.com/miniex/maidenx"
 
 [dependencies]
-maidenx_cuda_core = { path = "../maidenx_cuda_core", version = "0.0.3" }
-maidenx_cuda_kernels = { path = "../maidenx_cuda_kernels", version = "0.0.3" }
-maidenx_nn = { path = "../maidenx_nn", version = "0.0.3" }
-maidenx_tensor = { path = "../maidenx_tensor", version = "0.0.3" }
+maidenx_cuda_core = { path = "../maidenx_cuda_core", version = "0.0.4-dev" }
+maidenx_cuda_kernels = { path = "../maidenx_cuda_kernels", version = "0.0.4-dev" }
+maidenx_nn = { path = "../maidenx_nn", version = "0.0.4-dev" }
+maidenx_tensor = { path = "../maidenx_tensor", version = "0.0.4-dev" }
