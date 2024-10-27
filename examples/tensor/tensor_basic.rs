@@ -1,4 +1,4 @@
-use maiden_cuda::prelude::*;
+use maidenx::prelude::*;
 
 fn main() -> CudaResult<()> {
     // Create 3D tensors with shape [2, 3, 4]

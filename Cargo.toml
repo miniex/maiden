@@ -2,21 +2,21 @@
 members = ["crates/*"]
 
 [package]
-name = "maiden-cuda"
-version = "0.0.2"
+name = "maidenx"
+version = "0.0.3-dev"
 description = "CUDA implementation for Maiden Engine"
 license = "MIT OR Apache-2.0"
 authors = ["Han Damin <miniex@daminstudio.net>"]
 edition = "2021"
 publish = true
-repository = "https://github.com/miniex/maiden-cuda"
-documentation = "https://docs.rs/maiden-cuda"
+repository = "https://github.com/miniex/maidenx"
+documentation = "https://docs.rs/maidenx"
 readme = "README.md"
 keywords = ["cuda", "gpu", "maiden"]
 categories = ["science", "development-tools"]
 
 [dependencies]
-maiden_internal = { path = "crates/maiden_internal", version = "0.0.2" }
+maidenx_internal = { path = "crates/maidenx_internal", version = "0.0.3-dev" }
 
 [[example]]
 name = "tensor_basic"

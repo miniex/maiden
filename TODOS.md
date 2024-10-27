@@ -1,18 +1,5 @@
 # TODOS
 
-## Current Status
-
-### Implemented ✅
-- Basic tensor operations with CUDA support
-- Partial PyTorch-like tensor implementation
-- Core CUDA infrastructure
-
-### In Progress 🚧
-- CPU operations
-- Autograd functionality
-- Basic neural network layers
-- Unit test suite
-
 ## Roadmap
 
 ### Phase 1: Core Operations (High Priority)

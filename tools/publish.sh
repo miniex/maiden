@@ -1,15 +1,14 @@
 #!/bin/bash
 
 crates=(
-    cuda-sys
-    cuda-core
-    cuda-kernels
-    maiden_macro_utils
-    maiden_nn/macros
-    maiden_tensor
-    maiden_nn
-    maiden_internal
-    maiden_cuda
+    maidenx_cuda_sys
+    maidenx_cuda_core
+    maidenx_cuda_kernels
+    maidenx_macro_utils
+    maidenx_nn/macros
+    maidenx_tensor
+    maidenx_nn
+    maidenx_internal
 )
 
 if [ -n "$(git status --porcelain)" ]; then

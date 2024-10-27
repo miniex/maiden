@@ -1,4 +1,4 @@
-use maiden_cuda::prelude::*;
+use maidenx::prelude::*;
 
 fn main() -> CudaResult<()> {
     let data1 = vec![vec![1.0, 2.0], vec![3.0, 4.0]];

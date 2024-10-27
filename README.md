@@ -1,5 +1,5 @@
 <div align="center">
-    <h1>Maiden CUDA</h1>
+    <h1>MaidenX</h1>
     <p>Rust-based CUDA library designed for learning purposes and building my AI engines named Maiden Engine</p>
     <strong>🚧 This project is for personal learning and testing purposes, so it may not function properly. 🚧</strong>
     <h3>
@@ -18,7 +18,7 @@
 How to use Tensor:
 
 ```rust
-use maiden_cuda::prelude::*;
+use maidenx::prelude::*;
 
 fn main() -> CudaResult<()> {
     let tensor1 = Tensor::new(vec![
@@ -42,22 +42,22 @@ fn main() -> CudaResult<()> {
 
 How to use linear module:
 ```rust
-use maiden_cuda::prelude::*;
+use maidenx::prelude::*;
 
 fn main() -> CudaResult<()> {
     let input = Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], &[2, 2])?;
 
-    let linear = Linear::new_with_bias(2, 3, true)?;
+    let linear = nn::Linear::new_with_bias(2, 3, true)?;
 
     let linear_output = linear.forward(&input)?;
 
-    let relu = ReLU::new();
+    let relu = nn::ReLU::new();
     let relu_output = relu.forward(&linear_output)?;
 
-    let sigmoid = Sigmoid::new();
+    let sigmoid = nn::Sigmoid::new();
     let sigmoid_output = sigmoid.forward(&relu_output)?;
 
-    let tanh = Tanh::new();
+    let tanh = nn::Tanh::new();
     let tanh_output = tanh.forward(&sigmoid_output)?;
 
     println!("Input:\n{}", input);
@@ -84,7 +84,7 @@ For more examples, see [`examples`](examples/).
 
 ### LSP Setup
 
-For IDE support with CUDA files, create `.clangd` file in `crates/cuda-kernels/`:
+For IDE support with CUDA files, create `.clangd` file in `crates/maidenx_cuda_kernels/`:
 
 ```yaml
 CompileFlags:
