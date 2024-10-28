@@ -2,17 +2,17 @@ mod convert;
 mod display;
 
 use convert::TensorData;
+use maidenx_core::buffer::DeviceBuffer;
+use maidenx_core::device::Device;
 use maidenx_core::error::{MaidenXError, Result, TensorError};
-use maidenx_cuda_core::prelude::CudaBuffer;
 use maidenx_cuda_kernels::tensor_ops::{cuda_tensor_add, cuda_tensor_matmul, cuda_tensor_mul};
 use rand::prelude::*;
 use rand_distr::Normal;
 use std::fmt;
-use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct Tensor {
-    buffer: Arc<CudaBuffer>,
+    buffer: DeviceBuffer,
     shape: Vec<usize>,
     strides: Vec<usize>,
 }
@@ -42,24 +42,18 @@ impl Tensor {
         let shape = data.to_shape();
         let flat_data = data.to_flat_vec();
         let size = shape.iter().product::<usize>() * std::mem::size_of::<f32>();
-        let buffer = Arc::new(CudaBuffer::new(size).map_err(MaidenXError::from)?);
         let strides = Self::compute_strides(&shape);
 
-        let mut tensor = Self {
+        let device = maidenx_core::device::get_current_device();
+        let mut buffer = DeviceBuffer::new(size, &device)?;
+
+        buffer.copy_from_host(&flat_data)?;
+
+        Ok(Self {
             buffer,
             shape,
             strides,
-        };
-
-        if let Some(buffer) = Arc::get_mut(&mut tensor.buffer) {
-            buffer
-                .copy_from_host(&flat_data)
-                .map_err(MaidenXError::from)?;
-        } else {
-            return Err(TensorError::DataError("Failed to get mutable buffer".into()).into());
-        }
-
-        Ok(tensor)
+        })
     }
 
     pub fn from_vec<T: Into<Vec<f32>>>(vec: T, shape: &[usize]) -> Result<Self> {
@@ -76,22 +70,15 @@ impl Tensor {
         }
 
         let size = total_size * std::mem::size_of::<f32>();
-        let buffer = Arc::new(CudaBuffer::new(size).map_err(MaidenXError::from)?);
-        let strides = Self::compute_strides(shape);
+        let device = maidenx_core::device::get_current_device();
+        let mut buffer = DeviceBuffer::new(size, &device)?;
+        buffer.copy_from_host(&vec)?;
 
-        let mut tensor = Self {
+        Ok(Self {
             buffer,
             shape: shape.to_vec(),
-            strides,
-        };
-
-        if let Some(buffer) = Arc::get_mut(&mut tensor.buffer) {
-            buffer.copy_from_host(&vec).map_err(MaidenXError::from)?;
-        } else {
-            return Err(TensorError::DataError("Failed to get mutable buffer".into()).into());
-        }
-
-        Ok(tensor)
+            strides: Self::compute_strides(shape),
+        })
     }
 
     pub fn zeros(shape: &[usize]) -> Result<Self> {
@@ -108,6 +95,8 @@ impl Tensor {
         Self::from_vec(data, shape)
     }
 
+    // OPS
+
     pub fn add(&self, other: &Tensor) -> Result<Tensor> {
         if self.shape != other.shape {
             return Err(TensorError::ShapeMismatch(format!(
@@ -117,26 +106,34 @@ impl Tensor {
             .into());
         }
 
+        let device = maidenx_core::device::get_current_device();
         let mut result = Self {
-            buffer: Arc::new(CudaBuffer::new(self.buffer.len()).map_err(MaidenXError::from)?),
+            buffer: DeviceBuffer::new(self.buffer.len(), &device)?,
             shape: self.shape.clone(),
             strides: self.strides.clone(),
         };
 
-        let size = self.shape.iter().product::<usize>();
-
-        unsafe {
-            cuda_tensor_add(
-                Arc::get_mut(&mut result.buffer).unwrap().as_mut_ptr(),
-                self.buffer.as_ptr(),
-                other.buffer.as_ptr(),
-                size,
-            )
-            .map_err(MaidenXError::from)?;
+        match &device {
+            Device::Cpu => {
+                let a = self.to_vec()?;
+                let b = other.to_vec()?;
+                let result_data = maidenx_cpu_core::ops::tensor_ops::add(&a, &b)?;
+                result.buffer.copy_from_host(&result_data)?;
+            }
+            Device::Cuda(_) => unsafe {
+                cuda_tensor_add(
+                    result.buffer.as_mut_ptr(),
+                    self.buffer.as_ptr(),
+                    other.buffer.as_ptr(),
+                    self.size(),
+                )
+                .map_err(MaidenXError::from)?;
+            },
         }
 
         Ok(result)
     }
+
     pub fn mul(&self, other: &Tensor) -> Result<Tensor> {
         if self.shape != other.shape {
             return Err(TensorError::ShapeMismatch(format!(
@@ -146,22 +143,29 @@ impl Tensor {
             .into());
         }
 
+        let device = maidenx_core::device::get_current_device();
         let mut result = Self {
-            buffer: Arc::new(CudaBuffer::new(self.buffer.len()).map_err(MaidenXError::from)?),
+            buffer: DeviceBuffer::new(self.buffer.len(), &device)?,
             shape: self.shape.clone(),
             strides: self.strides.clone(),
         };
 
-        let size = self.shape.iter().product::<usize>();
-
-        unsafe {
-            cuda_tensor_mul(
-                Arc::get_mut(&mut result.buffer).unwrap().as_mut_ptr(),
-                self.buffer.as_ptr(),
-                other.buffer.as_ptr(),
-                size,
-            )
-            .map_err(MaidenXError::from)?;
+        match &device {
+            Device::Cpu => {
+                let a = self.to_vec()?;
+                let b = other.to_vec()?;
+                let result_data = maidenx_cpu_core::ops::tensor_ops::mul(&a, &b)?;
+                result.buffer.copy_from_host(&result_data)?;
+            }
+            Device::Cuda(_) => unsafe {
+                cuda_tensor_mul(
+                    result.buffer.as_mut_ptr(),
+                    self.buffer.as_ptr(),
+                    other.buffer.as_ptr(),
+                    self.size(),
+                )
+                .map_err(MaidenXError::from)?;
+            },
         }
 
         Ok(result)
@@ -191,30 +195,41 @@ impl Tensor {
         let result_strides = Self::compute_strides(&result_shape);
         let result_size = m * n * std::mem::size_of::<f32>();
 
+        let device = maidenx_core::device::get_current_device();
         let mut result = Self {
-            buffer: Arc::new(CudaBuffer::new(result_size).map_err(MaidenXError::from)?),
+            buffer: DeviceBuffer::new(result_size, &device)?,
             shape: result_shape,
             strides: result_strides,
         };
 
-        unsafe {
-            cuda_tensor_matmul(
-                Arc::get_mut(&mut result.buffer).unwrap().as_mut_ptr(),
-                self.buffer.as_ptr(),
-                other.buffer.as_ptr(),
-                m as i32,
-                n as i32,
-                k as i32,
-            )
-            .map_err(MaidenXError::from)?;
+        match &device {
+            Device::Cpu => {
+                let a = self.to_vec()?;
+                let b = other.to_vec()?;
+                let result_data =
+                    maidenx_cpu_core::ops::tensor_ops::matmul(&a, &self.shape, &b, &other.shape)?;
+                result.buffer.copy_from_host(&result_data)?;
+            }
+            Device::Cuda(_) => unsafe {
+                cuda_tensor_matmul(
+                    result.buffer.as_mut_ptr(),
+                    self.buffer.as_ptr(),
+                    other.buffer.as_ptr(),
+                    m as i32,
+                    n as i32,
+                    k as i32,
+                )
+                .map_err(MaidenXError::from)?;
+            },
         }
 
         Ok(result)
     }
 
     pub fn mul_scalar(&self, scalar: f32) -> Result<Self> {
+        let device = maidenx_core::device::get_current_device();
         let mut result = Self {
-            buffer: Arc::new(CudaBuffer::new(self.buffer.len()).map_err(MaidenXError::from)?),
+            buffer: DeviceBuffer::new(self.buffer.len(), &device)?,
             shape: self.shape.clone(),
             strides: self.strides.clone(),
         };
@@ -225,14 +240,11 @@ impl Tensor {
             .map(|x| x * scalar)
             .collect::<Vec<f32>>();
 
-        if let Some(buffer) = Arc::get_mut(&mut result.buffer) {
-            buffer.copy_from_host(&data).map_err(MaidenXError::from)?;
-        } else {
-            return Err(TensorError::DataError("Failed to get mutable buffer".into()).into());
-        }
-
+        result.buffer.copy_from_host(&data)?;
         Ok(result)
     }
+
+    // Shape
 
     pub fn reshape(&mut self, new_shape: &[usize]) -> Result<()> {
         let new_size: usize = new_shape.iter().product();
@@ -304,6 +316,7 @@ impl Tensor {
         let first = &tensors[0];
         let mut target_shape = first.shape.clone();
 
+        // Validate shapes
         for tensor in tensors.iter().skip(1) {
             if tensor.shape.len() != first.shape.len() {
                 return Err(TensorError::ShapeMismatch(
@@ -352,18 +365,12 @@ impl Tensor {
     }
 
     // Utility methods
-    pub fn data(&self) -> &CudaBuffer {
+    pub fn data(&self) -> &DeviceBuffer {
         &self.buffer
     }
 
-    pub fn data_mut(&mut self) -> &mut CudaBuffer {
-        if Arc::strong_count(&self.buffer) == 1 {
-            Arc::get_mut(&mut self.buffer).unwrap()
-        } else {
-            let new_buffer = self.buffer.as_ref().clone();
-            self.buffer = Arc::new(new_buffer);
-            Arc::get_mut(&mut self.buffer).unwrap()
-        }
+    pub fn data_mut(&mut self) -> &mut DeviceBuffer {
+        &mut self.buffer
     }
 
     pub fn ndim(&self) -> usize {
@@ -521,7 +528,7 @@ mod tests {
         assert_eq!(result.shape(), &[2, 2]);
 
         let result_data = result.to_vec()?;
-        let expected = vec![
+        let expected = [
             1.0 * 7.0 + 2.0 * 9.0 + 3.0 * 11.0,
             1.0 * 8.0 + 2.0 * 10.0 + 3.0 * 12.0,
             4.0 * 7.0 + 5.0 * 9.0 + 6.0 * 11.0,
@@ -644,6 +651,3 @@ mod tests {
         Ok(())
     }
 }
-
-
-

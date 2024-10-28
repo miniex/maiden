@@ -19,6 +19,10 @@ categories = ["science", "development-tools"]
 maidenx_internal = { path = "crates/maidenx_internal", version = "0.0.4-dev" }
 
 [[example]]
+name = "device_benchmark"
+path = "examples/device/device_benchmark.rs"
+
+[[example]]
 name = "tensor_basic"
 path = "examples/tensor/tensor_basic.rs"
 

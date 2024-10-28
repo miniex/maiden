@@ -9,6 +9,8 @@ publish = true
 repository = "https://github.com/miniex/maidenx"
 
 [dependencies]
+maidenx_core = { path = "../maidenx_core", version = "0.0.4-dev" }
+maidenx_cpu_core = { path = "../maidenx_cpu_core", version = "0.0.4-dev" }
 maidenx_cuda_core = { path = "../maidenx_cuda_core", version = "0.0.4-dev" }
 maidenx_cuda_kernels = { path = "../maidenx_cuda_kernels", version = "0.0.4-dev" }
 maidenx_nn = { path = "../maidenx_nn", version = "0.0.4-dev" }

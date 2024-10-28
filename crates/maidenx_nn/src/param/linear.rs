@@ -1,5 +1,8 @@
 use crate::module::Module;
-use maidenx_core::error::{MaidenXError, Result};
+use maidenx_core::{
+    device::Device,
+    error::{MaidenXError, Result},
+};
 use maidenx_cuda_kernels::nn_ops::{cuda_bilinear_forward, cuda_linear_forward};
 use maidenx_tensor::Tensor;
 
@@ -39,23 +42,42 @@ impl Linear {
 
     pub fn forward(&self, input: &Tensor) -> Result<Tensor> {
         let batch_size = input.size_dim(0).unwrap_or(1);
-        let mut output =
-            Tensor::zeros(&[batch_size, self.out_features]).map_err(MaidenXError::from)?;
 
-        unsafe {
-            cuda_linear_forward(
-                output.data_mut().as_mut_ptr(),
-                input.data().as_ptr(),
-                self.weight.data().as_ptr(),
-                self.bias.as_ref().map(|b| b.data().as_ptr()),
-                batch_size as i32,
-                self.out_features as i32,
-                self.in_features as i32,
-            )
-            .map_err(MaidenXError::from)?;
+        let device = maidenx_core::device::get_current_device();
+        match device {
+            Device::Cpu => {
+                let input_data = input.to_vec()?;
+                let weight_data = self.weight.to_vec()?;
+                let bias_data = self.bias.as_ref().map(|b| b.to_vec()).transpose()?;
+
+                let result = maidenx_cpu_core::ops::nn_ops::layer::linear::linear_forward(
+                    &input_data,
+                    &weight_data,
+                    bias_data.as_deref(),
+                    batch_size as i32,
+                    self.out_features as i32,
+                    self.in_features as i32,
+                )?;
+
+                Tensor::from_vec(result, &[batch_size, self.out_features])
+            }
+            Device::Cuda(_) => {
+                let mut output = Tensor::zeros(&[batch_size, self.out_features])?;
+                unsafe {
+                    cuda_linear_forward(
+                        output.data_mut().as_mut_ptr(),
+                        input.data().as_ptr(),
+                        self.weight.data().as_ptr(),
+                        self.bias.as_ref().map(|b| b.data().as_ptr()),
+                        batch_size as i32,
+                        self.out_features as i32,
+                        self.in_features as i32,
+                    )
+                    .map_err(MaidenXError::from)?;
+                }
+                Ok(output)
+            }
         }
-
-        Ok(output)
     }
 
     pub fn set_weight(&mut self, weight: Tensor) -> Result<()> {
@@ -151,25 +173,47 @@ impl Bilinear {
 
     pub fn forward_bilinear(&self, input1: &Tensor, input2: &Tensor) -> Result<Tensor> {
         let batch_size = input1.size_dim(0).unwrap_or(1);
-        let mut output =
-            Tensor::zeros(&[batch_size, self.out_features]).map_err(MaidenXError::from)?;
 
-        unsafe {
-            cuda_bilinear_forward(
-                output.data_mut().as_mut_ptr(),
-                input1.data().as_ptr(),
-                input2.data().as_ptr(),
-                self.weight.data().as_ptr(),
-                self.bias.as_ref().map(|b| b.data().as_ptr()),
-                batch_size as i32,
-                self.out_features as i32,
-                self.in1_features as i32,
-                self.in2_features as i32,
-            )
-            .map_err(MaidenXError::from)?;
+        let device = maidenx_core::device::get_current_device();
+        match device {
+            Device::Cpu => {
+                let input1_data = input1.to_vec()?;
+                let input2_data = input2.to_vec()?;
+                let weight_data = self.weight.to_vec()?;
+                let bias_data = self.bias.as_ref().map(|b| b.to_vec()).transpose()?;
+
+                let result = maidenx_cpu_core::ops::nn_ops::layer::linear::bilinear_forward(
+                    &input1_data,
+                    &input2_data,
+                    &weight_data,
+                    bias_data.as_deref(),
+                    batch_size as i32,
+                    self.out_features as i32,
+                    self.in1_features as i32,
+                    self.in2_features as i32,
+                )?;
+
+                Tensor::from_vec(result, &[batch_size, self.out_features])
+            }
+            Device::Cuda(_) => {
+                let mut output = Tensor::zeros(&[batch_size, self.out_features])?;
+                unsafe {
+                    cuda_bilinear_forward(
+                        output.data_mut().as_mut_ptr(),
+                        input1.data().as_ptr(),
+                        input2.data().as_ptr(),
+                        self.weight.data().as_ptr(),
+                        self.bias.as_ref().map(|b| b.data().as_ptr()),
+                        batch_size as i32,
+                        self.out_features as i32,
+                        self.in1_features as i32,
+                        self.in2_features as i32,
+                    )
+                    .map_err(MaidenXError::from)?;
+                }
+                Ok(output)
+            }
         }
-
-        Ok(output)
     }
 
     pub fn set_weight(&mut self, weight: Tensor) -> Result<()> {

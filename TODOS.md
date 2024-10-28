@@ -2,7 +2,7 @@
 
 ## Under Consideration
 
-- [ ] Add CPU computation processing capability
+- [x] Add CPU computation processing capability
 - [ ] Add MPS (Metal Performance Shaders) GPU acceleration support 
 - [ ] Add Vulkan GPU acceleration support
 - [ ] Add WebGPU acceleration support

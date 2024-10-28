@@ -1,4 +1,5 @@
 use crate::device::DeviceError;
+use maidenx_cpu_core::error::CpuError;
 use maidenx_cuda_core::error::CudaError;
 use std::fmt;
 
@@ -38,6 +39,9 @@ pub enum TensorError {
     InvalidOperation(String),
     DataError(String),
     IndexError(String),
+    AllocationError(String),
+    InvalidValue(String),
+    Other(String),
 }
 
 impl std::fmt::Display for TensorError {
@@ -48,6 +52,9 @@ impl std::fmt::Display for TensorError {
             TensorError::InvalidOperation(msg) => write!(f, "Invalid operation: {}", msg),
             TensorError::DataError(msg) => write!(f, "Data error: {}", msg),
             TensorError::IndexError(msg) => write!(f, "Index error: {}", msg),
+            TensorError::AllocationError(msg) => write!(f, "Allocation error: {}", msg),
+            TensorError::InvalidValue(msg) => write!(f, "Invalid value: {}", msg),
+            TensorError::Other(msg) => write!(f, "Error: {}", msg),
         }
     }
 }
@@ -92,6 +99,20 @@ impl From<DeviceError> for MaidenXError {
 impl From<TensorError> for MaidenXError {
     fn from(err: TensorError) -> Self {
         MaidenXError::TensorError(err)
+    }
+}
+
+impl From<CpuError> for MaidenXError {
+    fn from(err: CpuError) -> Self {
+        match err {
+            CpuError::AllocationFailed => MaidenXError::TensorError(TensorError::AllocationError(
+                "CPU allocation failed".into(),
+            )),
+            CpuError::InvalidValue => MaidenXError::TensorError(TensorError::InvalidValue(
+                "Invalid CPU buffer value".into(),
+            )),
+            CpuError::Other(msg) => MaidenXError::TensorError(TensorError::Other(msg)),
+        }
     }
 }
 

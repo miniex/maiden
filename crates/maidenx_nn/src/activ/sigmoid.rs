@@ -1,5 +1,8 @@
 use crate::module::Module;
-use maidenx_core::error::{MaidenXError, Result};
+use maidenx_core::{
+    device::Device,
+    error::{MaidenXError, Result},
+};
 use maidenx_cuda_kernels::nn_ops::cuda_sigmoid_forward;
 use maidenx_tensor::Tensor;
 
@@ -25,15 +28,23 @@ impl Sigmoid {
             Tensor::zeros(input.shape())?
         };
 
-        unsafe {
-            cuda_sigmoid_forward(
-                output.data_mut().as_mut_ptr(),
-                input.data().as_ptr(),
-                input.size(),
-            )
-            .map_err(MaidenXError::from)?;
+        let device = maidenx_core::device::get_current_device();
+        match device {
+            Device::Cpu => {
+                let input_data = input.to_vec()?;
+                let result =
+                    maidenx_cpu_core::ops::nn_ops::activation::sigmoid_forward(&input_data)?;
+                output = Tensor::from_vec(result, input.shape())?;
+            }
+            Device::Cuda(_) => unsafe {
+                cuda_sigmoid_forward(
+                    output.data_mut().as_mut_ptr(),
+                    input.data().as_ptr(),
+                    input.size(),
+                )
+                .map_err(MaidenXError::from)?;
+            },
         }
-
         output.reshape(input.shape())?;
 
         Ok(output)
