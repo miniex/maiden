@@ -20,37 +20,14 @@
 ### Prerequisites
 
 - CUDA Toolkit
+- CMake
 
-### Details
+### How to use
 
-#### Tensor
-
-<details>
-  <summary>tensor</summary>
-</details>
-
-#### Module
-
-<details>
-  <summary>nn::layer</summary>
-
-<!-- LAYERS -->
-- **Linear** - A module that applies a linear transformation to the incoming data: y = xW^T + b. The parameters are: weight of shape (out_features, in_features) and an optional bias of shape (out_features)
-- **Bilinear** - A module that applies a bilinear transformation to the incoming data: y = x1 * A * x2 + b. The parameters are: weight of shape (out_features, in1_features, in2_features) and an optional bias of shape (out_features)
-<!-- /LAYERS -->
-
-</details>
-
-<details>
-  <summary>nn::activation</summary>
-
-<!-- ACTIVATIONS -->
-- **ReLU** - A module that applies the rectified linear unit function element-wise: ReLU(x) = max(0, x). Can be done in-place to save memory.
-- **Sigmoid** - A module that applies the sigmoid function element-wise: Sigmoid(x) = 1 / (1 + exp(-x)). Can be done in-place to save memory.
-- **Tanh** - A module that applies the hyperbolic tangent function element-wise: Tanh(x) = (exp(x) - exp(-x)) / (exp(x) + exp(-x)). Can be done in-place to save memory.
-<!-- /ACTIVATIONS -->
-
-</details>
+|            | Using PyTorch                            | Using MaidenX                                                    |
+|------------|------------------------------------------|------------------------------------------------------------------|
+| Creation   | `torch.Tensor([[1, 2], [3, 4]])`         | `Tensor::new(vec![vec![1.0, 2.0], vec![3.0, 4.0]])`              |
+| Creation   | `torch.Tensor([[1, 2], [3, 4]])`         | `Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], &[2, 2])`            |
 
 ### Example
 
@@ -59,7 +36,7 @@ How to use Tensor:
 ```rust
 use maidenx::prelude::*;
 
-fn main() -> CudaResult<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tensor1 = Tensor::new(vec![
         vec![1.0, 2.0, 3.0],
         vec![4.0, 5.0, 6.0],
@@ -83,7 +60,7 @@ How to use linear module:
 ```rust
 use maidenx::prelude::*;
 
-fn main() -> CudaResult<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let input = Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], &[2, 2])?;
 
     let linear = nn::Linear::new_with_bias(2, 3, true)?;

@@ -1,6 +1,6 @@
 use maidenx::prelude::*;
 
-fn main() -> CudaResult<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let data1 = vec![vec![1.0, 2.0], vec![3.0, 4.0]];
     let tensor1 = Tensor::new(data1)?;
 

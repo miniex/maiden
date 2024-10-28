@@ -1,6 +1,6 @@
 use maidenx::prelude::*;
 
-fn main() -> CudaResult<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create 3D tensors with shape [2, 3, 4]
     let tensor1 = Tensor::new(vec![
         vec![

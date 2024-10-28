@@ -1,6 +1,6 @@
 use maidenx::prelude::*;
 
-fn main() -> CudaResult<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let input = Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], &[2, 2])?;
 
     let linear = nn::Linear::new_with_bias(2, 3, true)?;
