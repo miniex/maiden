@@ -1,5 +1,5 @@
 use crate::module::Module;
-use maidenx_cuda_core::error::CudaResult;
+use maidenx_core::error::{MaidenXError, Result};
 use maidenx_cuda_kernels::nn_ops::cuda_relu_forward;
 use maidenx_tensor::Tensor;
 
@@ -10,7 +10,6 @@ pub struct ReLU {
 
 impl ReLU {
     pub fn new() -> Self {
-        // inplace: false
         ReLU::default()
     }
 
@@ -19,7 +18,7 @@ impl ReLU {
         self
     }
 
-    pub fn forward(&self, input: &Tensor) -> CudaResult<Tensor> {
+    pub fn forward(&self, input: &Tensor) -> Result<Tensor> {
         let mut output = if self.inplace {
             input.clone()
         } else {
@@ -31,7 +30,8 @@ impl ReLU {
                 output.data_mut().as_mut_ptr(),
                 input.data().as_ptr(),
                 input.size(),
-            )?;
+            )
+            .map_err(MaidenXError::from)?;
         }
 
         output.reshape(input.shape())?;
@@ -47,11 +47,11 @@ impl ReLU {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use maidenx_cuda_core::error::CudaResult;
+    use maidenx_core::error::Result;
     use maidenx_tensor::Tensor;
 
     #[test]
-    fn test_relu_forward() -> CudaResult<()> {
+    fn test_relu_forward() -> Result<()> {
         let relu = ReLU::new();
         let input = Tensor::new(vec![-2.0, -1.0, 0.0, 1.0, 2.0])?;
         let output = relu.forward(&input)?;
@@ -67,7 +67,7 @@ mod tests {
     }
 
     #[test]
-    fn test_relu_inplace() -> CudaResult<()> {
+    fn test_relu_inplace() -> Result<()> {
         let relu = ReLU::new().inplace(true);
         let input_data = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
         let input = Tensor::new(input_data.clone())?;

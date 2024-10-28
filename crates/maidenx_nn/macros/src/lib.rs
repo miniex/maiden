@@ -14,12 +14,12 @@ pub fn derive_module(input: TokenStream) -> TokenStream {
     let manifest = MaidenXManifest::default();
     let maidenx_nn_path = manifest.get_path("maidenx_nn");
     let maidenx_tensor_path = manifest.get_path("maidenx_tensor");
-    let maidenx_cuda_core_path = manifest.get_path("maidenx_cuda_core");
+    let maidenx_core_path = manifest.get_path("maidenx_core");
 
     let expanded = quote! {
         impl #impl_generics #maidenx_nn_path::module::Module for #name #ty_generics #where_clause {
             fn forward(&self, input: &#maidenx_tensor_path::Tensor)
-                -> #maidenx_cuda_core_path::error::CudaResult<#maidenx_tensor_path::Tensor> {
+                -> #maidenx_core_path::error::Result<#maidenx_tensor_path::Tensor> {
                 self.forward(input)
             }
 

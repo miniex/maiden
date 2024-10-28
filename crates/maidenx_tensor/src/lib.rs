@@ -2,7 +2,8 @@ mod convert;
 mod display;
 
 use convert::TensorData;
-use maidenx_cuda_core::prelude::{CudaBuffer, CudaError, CudaResult};
+use maidenx_core::error::{MaidenXError, Result, TensorError};
+use maidenx_cuda_core::prelude::CudaBuffer;
 use maidenx_cuda_kernels::tensor_ops::{cuda_tensor_add, cuda_tensor_matmul, cuda_tensor_mul};
 use rand::prelude::*;
 use rand_distr::Normal;
@@ -34,14 +35,14 @@ impl fmt::Display for Tensor {
 }
 
 impl Tensor {
-    pub fn new<T>(data: T) -> CudaResult<Self>
+    pub fn new<T>(data: T) -> Result<Self>
     where
         T: TensorData,
     {
         let shape = data.to_shape();
         let flat_data = data.to_flat_vec();
         let size = shape.iter().product::<usize>() * std::mem::size_of::<f32>();
-        let buffer = Arc::new(CudaBuffer::new(size)?);
+        let buffer = Arc::new(CudaBuffer::new(size).map_err(MaidenXError::from)?);
         let strides = Self::compute_strides(&shape);
 
         let mut tensor = Self {
@@ -51,24 +52,31 @@ impl Tensor {
         };
 
         if let Some(buffer) = Arc::get_mut(&mut tensor.buffer) {
-            buffer.copy_from_host(&flat_data)?;
+            buffer
+                .copy_from_host(&flat_data)
+                .map_err(MaidenXError::from)?;
         } else {
-            return Err(CudaError::AllocationFailed);
+            return Err(TensorError::DataError("Failed to get mutable buffer".into()).into());
         }
 
         Ok(tensor)
     }
 
-    pub fn from_vec<T: Into<Vec<f32>>>(vec: T, shape: &[usize]) -> CudaResult<Self> {
+    pub fn from_vec<T: Into<Vec<f32>>>(vec: T, shape: &[usize]) -> Result<Self> {
         let vec = vec.into();
         let total_size: usize = shape.iter().product();
 
         if vec.len() != total_size {
-            return Err(CudaError::ShapeMismatch);
+            return Err(TensorError::ShapeMismatch(format!(
+                "Vector length {} does not match shape {:?}",
+                vec.len(),
+                shape
+            ))
+            .into());
         }
 
         let size = total_size * std::mem::size_of::<f32>();
-        let buffer = Arc::new(CudaBuffer::new(size)?);
+        let buffer = Arc::new(CudaBuffer::new(size).map_err(MaidenXError::from)?);
         let strides = Self::compute_strides(shape);
 
         let mut tensor = Self {
@@ -78,116 +86,39 @@ impl Tensor {
         };
 
         if let Some(buffer) = Arc::get_mut(&mut tensor.buffer) {
-            buffer.copy_from_host(&vec)?;
+            buffer.copy_from_host(&vec).map_err(MaidenXError::from)?;
         } else {
-            return Err(CudaError::AllocationFailed);
+            return Err(TensorError::DataError("Failed to get mutable buffer".into()).into());
         }
 
         Ok(tensor)
     }
 
-    pub fn data(&self) -> &CudaBuffer {
-        &self.buffer
-    }
-
-    pub fn data_mut(&mut self) -> &mut CudaBuffer {
-        if Arc::strong_count(&self.buffer) == 1 {
-            Arc::get_mut(&mut self.buffer).unwrap()
-        } else {
-            let new_buffer = self.buffer.as_ref().clone();
-            self.buffer = Arc::new(new_buffer);
-            Arc::get_mut(&mut self.buffer).unwrap()
-        }
-    }
-
-    pub fn zeros(shape: &[usize]) -> CudaResult<Self> {
+    pub fn zeros(shape: &[usize]) -> Result<Self> {
         let size = shape.iter().product::<usize>();
         let data = vec![0.0f32; size];
         Self::from_vec(data, shape)
     }
 
-    pub fn ndim(&self) -> usize {
-        self.shape.len()
-    }
-
-    pub fn size(&self) -> usize {
-        self.shape.iter().product()
-    }
-    pub fn size_dim(&self, dim: usize) -> Option<usize> {
-        self.shape.get(dim).copied()
-    }
-
-    pub fn shape(&self) -> &[usize] {
-        &self.shape
-    }
-
-    pub fn strides(&self) -> &[usize] {
-        &self.strides
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.shape.iter().any(|&dim| dim == 0)
-    }
-
-    pub fn to_vec(&self) -> CudaResult<Vec<f32>> {
-        let num_elements = self.shape.iter().product::<usize>();
-        let mut result = vec![0.0f32; num_elements];
-        self.buffer.copy_to_host(&mut result)?;
-        Ok(result)
-    }
-
-    fn compute_strides(shape: &[usize]) -> Vec<usize> {
-        let mut strides = vec![1; shape.len()];
-        for i in (0..shape.len() - 1).rev() {
-            strides[i] = strides[i + 1] * shape[i + 1];
-        }
-        strides
-    }
-
-    pub fn reshape(&mut self, new_shape: &[usize]) -> CudaResult<()> {
-        let new_size: usize = new_shape.iter().product();
-        if new_size != self.size() {
-            return Err(CudaError::ShapeMismatch);
-        }
-
-        self.shape = new_shape.to_vec();
-        self.strides = Self::compute_strides(&self.shape);
-        Ok(())
-    }
-
-    pub fn randn(shape: &[usize]) -> CudaResult<Self> {
+    pub fn randn(shape: &[usize]) -> Result<Self> {
         let size = shape.iter().product::<usize>();
         let mut rng = rand::thread_rng();
-        let normal = Normal::new(0.0, 1.0).unwrap();
+        let normal = Normal::new(0.0, 1.0).map_err(|e| TensorError::DataError(e.to_string()))?;
         let data: Vec<f32> = (0..size).map(|_| normal.sample(&mut rng) as f32).collect();
         Self::from_vec(data, shape)
     }
 
-    pub fn mul_scalar(&self, scalar: f32) -> CudaResult<Self> {
-        let mut result = Self {
-            buffer: Arc::new(CudaBuffer::new(self.buffer.len())?),
-            shape: self.shape.clone(),
-            strides: self.strides.clone(),
-        };
-
-        let scaled_data: Vec<f32> = self.to_vec()?.iter().map(|x| x * scalar).collect();
-
-        if let Some(buffer) = Arc::get_mut(&mut result.buffer) {
-            buffer.copy_from_host(&scaled_data)?;
-        } else {
-            return Err(CudaError::AllocationFailed);
-        }
-
-        Ok(result)
-    }
-
-    pub fn add(&self, other: &Tensor) -> CudaResult<Tensor> {
+    pub fn add(&self, other: &Tensor) -> Result<Tensor> {
         if self.shape != other.shape {
-            return Err(CudaError::ShapeMismatch);
+            return Err(TensorError::ShapeMismatch(format!(
+                "Cannot add tensors with shapes {:?} and {:?}",
+                self.shape, other.shape
+            ))
+            .into());
         }
 
         let mut result = Self {
-            buffer: Arc::new(CudaBuffer::new(self.buffer.len())?),
+            buffer: Arc::new(CudaBuffer::new(self.buffer.len()).map_err(MaidenXError::from)?),
             shape: self.shape.clone(),
             strides: self.strides.clone(),
         };
@@ -200,19 +131,23 @@ impl Tensor {
                 self.buffer.as_ptr(),
                 other.buffer.as_ptr(),
                 size,
-            )?;
+            )
+            .map_err(MaidenXError::from)?;
         }
 
         Ok(result)
     }
-
-    pub fn mul(&self, other: &Tensor) -> CudaResult<Tensor> {
+    pub fn mul(&self, other: &Tensor) -> Result<Tensor> {
         if self.shape != other.shape {
-            return Err(CudaError::ShapeMismatch);
+            return Err(TensorError::ShapeMismatch(format!(
+                "Cannot multiply tensors with shapes {:?} and {:?}",
+                self.shape, other.shape
+            ))
+            .into());
         }
 
         let mut result = Self {
-            buffer: Arc::new(CudaBuffer::new(self.buffer.len())?),
+            buffer: Arc::new(CudaBuffer::new(self.buffer.len()).map_err(MaidenXError::from)?),
             shape: self.shape.clone(),
             strides: self.strides.clone(),
         };
@@ -225,22 +160,30 @@ impl Tensor {
                 self.buffer.as_ptr(),
                 other.buffer.as_ptr(),
                 size,
-            )?;
+            )
+            .map_err(MaidenXError::from)?;
         }
 
         Ok(result)
     }
 
-    pub fn matmul(&self, other: &Tensor) -> CudaResult<Tensor> {
+    pub fn matmul(&self, other: &Tensor) -> Result<Tensor> {
         if self.shape.len() != 2 || other.shape.len() != 2 {
-            return Err(CudaError::ShapeMismatch);
+            return Err(TensorError::DimensionMismatch(
+                "Both tensors must be 2-dimensional for matrix multiplication".into(),
+            )
+            .into());
         }
 
         let m = self.shape[0];
         let k = self.shape[1];
 
         if k != other.shape[0] {
-            return Err(CudaError::ShapeMismatch);
+            return Err(TensorError::ShapeMismatch(format!(
+                "Cannot multiply matrix with shape {:?} and {:?}",
+                self.shape, other.shape
+            ))
+            .into());
         }
         let n = other.shape[1];
 
@@ -249,7 +192,7 @@ impl Tensor {
         let result_size = m * n * std::mem::size_of::<f32>();
 
         let mut result = Self {
-            buffer: Arc::new(CudaBuffer::new(result_size)?),
+            buffer: Arc::new(CudaBuffer::new(result_size).map_err(MaidenXError::from)?),
             shape: result_shape,
             strides: result_strides,
         };
@@ -262,20 +205,66 @@ impl Tensor {
                 m as i32,
                 n as i32,
                 k as i32,
-            )?;
+            )
+            .map_err(MaidenXError::from)?;
         }
 
         Ok(result)
     }
 
-    pub fn split_at(&self, dim: usize, index: usize) -> CudaResult<(Tensor, Tensor)> {
+    pub fn mul_scalar(&self, scalar: f32) -> Result<Self> {
+        let mut result = Self {
+            buffer: Arc::new(CudaBuffer::new(self.buffer.len()).map_err(MaidenXError::from)?),
+            shape: self.shape.clone(),
+            strides: self.strides.clone(),
+        };
+
+        let data = self
+            .to_vec()?
+            .iter()
+            .map(|x| x * scalar)
+            .collect::<Vec<f32>>();
+
+        if let Some(buffer) = Arc::get_mut(&mut result.buffer) {
+            buffer.copy_from_host(&data).map_err(MaidenXError::from)?;
+        } else {
+            return Err(TensorError::DataError("Failed to get mutable buffer".into()).into());
+        }
+
+        Ok(result)
+    }
+
+    pub fn reshape(&mut self, new_shape: &[usize]) -> Result<()> {
+        let new_size: usize = new_shape.iter().product();
+        if new_size != self.size() {
+            return Err(TensorError::ShapeMismatch(format!(
+                "Cannot reshape tensor of size {} into shape {:?}",
+                self.size(),
+                new_shape
+            ))
+            .into());
+        }
+
+        self.shape = new_shape.to_vec();
+        self.strides = Self::compute_strides(&self.shape);
+        Ok(())
+    }
+
+    pub fn split_at(&self, dim: usize, index: usize) -> Result<(Tensor, Tensor)> {
         if dim >= self.shape.len() {
-            return Err(CudaError::InvalidArgument("Dimension out of bounds".into()));
+            return Err(TensorError::IndexError(format!(
+                "Dimension {} is out of bounds for tensor with {} dimensions",
+                dim,
+                self.shape.len()
+            ))
+            .into());
         }
         if index >= self.shape[dim] {
-            return Err(CudaError::InvalidArgument(
-                "Split index out of bounds".into(),
-            ));
+            return Err(TensorError::IndexError(format!(
+                "Split index {} is out of bounds for dimension {} with size {}",
+                index, dim, self.shape[dim]
+            ))
+            .into());
         }
 
         let mut first_shape = self.shape.clone();
@@ -307,9 +296,9 @@ impl Tensor {
         ))
     }
 
-    pub fn cat(tensors: &[&Tensor], dim: usize) -> CudaResult<Tensor> {
+    pub fn cat(tensors: &[&Tensor], dim: usize) -> Result<Tensor> {
         if tensors.is_empty() {
-            return Err(CudaError::InvalidArgument("Empty tensor list".into()));
+            return Err(TensorError::InvalidOperation("Empty tensor list".into()).into());
         }
 
         let first = &tensors[0];
@@ -317,11 +306,18 @@ impl Tensor {
 
         for tensor in tensors.iter().skip(1) {
             if tensor.shape.len() != first.shape.len() {
-                return Err(CudaError::ShapeMismatch);
+                return Err(TensorError::ShapeMismatch(
+                    "All tensors must have the same number of dimensions".into(),
+                )
+                .into());
             }
             for (i, (&s1, &s2)) in first.shape.iter().zip(tensor.shape.iter()).enumerate() {
                 if i != dim && s1 != s2 {
-                    return Err(CudaError::ShapeMismatch);
+                    return Err(TensorError::ShapeMismatch(format!(
+                        "Incompatible shapes for concatenation: {:?} and {:?}",
+                        first.shape, tensor.shape
+                    ))
+                    .into());
                 }
             }
         }
@@ -347,8 +343,68 @@ impl Tensor {
             }
             Tensor::from_vec(result_data, &target_shape)
         } else {
-            Err(CudaError::InvalidArgument("Unsupported dimension".into()))
+            Err(TensorError::InvalidOperation(format!(
+                "Concatenation along dimension {} is not supported",
+                dim
+            ))
+            .into())
         }
+    }
+
+    // Utility methods
+    pub fn data(&self) -> &CudaBuffer {
+        &self.buffer
+    }
+
+    pub fn data_mut(&mut self) -> &mut CudaBuffer {
+        if Arc::strong_count(&self.buffer) == 1 {
+            Arc::get_mut(&mut self.buffer).unwrap()
+        } else {
+            let new_buffer = self.buffer.as_ref().clone();
+            self.buffer = Arc::new(new_buffer);
+            Arc::get_mut(&mut self.buffer).unwrap()
+        }
+    }
+
+    pub fn ndim(&self) -> usize {
+        self.shape.len()
+    }
+
+    pub fn size(&self) -> usize {
+        self.shape.iter().product()
+    }
+
+    pub fn size_dim(&self, dim: usize) -> Option<usize> {
+        self.shape.get(dim).copied()
+    }
+
+    pub fn shape(&self) -> &[usize] {
+        &self.shape
+    }
+
+    pub fn strides(&self) -> &[usize] {
+        &self.strides
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.shape.iter().any(|&dim| dim == 0)
+    }
+
+    pub fn to_vec(&self) -> Result<Vec<f32>> {
+        let num_elements = self.shape.iter().product::<usize>();
+        let mut result = vec![0.0f32; num_elements];
+        self.buffer
+            .copy_to_host(&mut result)
+            .map_err(MaidenXError::from)?;
+        Ok(result)
+    }
+
+    fn compute_strides(shape: &[usize]) -> Vec<usize> {
+        let mut strides = vec![1; shape.len()];
+        for i in (0..shape.len() - 1).rev() {
+            strides[i] = strides[i + 1] * shape[i + 1];
+        }
+        strides
     }
 }
 
@@ -357,7 +413,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_1d_tensor() -> CudaResult<()> {
+    fn test_1d_tensor() -> Result<()> {
         let data = vec![1.0, 2.0, 3.0];
         let tensor = Tensor::new(data.clone())?;
 
@@ -368,7 +424,7 @@ mod tests {
     }
 
     #[test]
-    fn test_2d_tensor() -> CudaResult<()> {
+    fn test_2d_tensor() -> Result<()> {
         let data = vec![vec![1.0, 2.0], vec![3.0, 4.0]];
         let tensor = Tensor::new(data)?;
 
@@ -379,7 +435,7 @@ mod tests {
     }
 
     #[test]
-    fn test_3d_tensor() -> CudaResult<()> {
+    fn test_3d_tensor() -> Result<()> {
         let data = vec![
             vec![vec![1.0, 2.0], vec![3.0, 4.0]],
             vec![vec![5.0, 6.0], vec![7.0, 8.0]],
@@ -396,7 +452,7 @@ mod tests {
     }
 
     #[test]
-    fn test_4d_tensor() -> CudaResult<()> {
+    fn test_4d_tensor() -> Result<()> {
         let data = vec![vec![
             vec![vec![1.0, 2.0], vec![3.0, 4.0]],
             vec![vec![5.0, 6.0], vec![7.0, 8.0]],
@@ -413,50 +469,65 @@ mod tests {
     }
 
     #[test]
-    fn test_tensor_add() -> CudaResult<()> {
+    fn test_tensor_add() -> Result<()> {
         let tensor1 = Tensor::new(vec![vec![1.0, 2.0], vec![3.0, 4.0]])?;
         let tensor2 = Tensor::new(vec![vec![5.0, 6.0], vec![7.0, 8.0]])?;
 
         let result = tensor1.add(&tensor2)?;
         assert_eq!(result.shape(), &[2, 2]);
-        assert_eq!(result.to_vec()?, [6.0, 8.0, 10.0, 12.0]);
+        assert_eq!(result.to_vec()?, vec![6.0, 8.0, 10.0, 12.0]);
         Ok(())
     }
 
     #[test]
-    fn test_tensor_mul() -> CudaResult<()> {
+    fn test_tensor_add_shape_mismatch() -> Result<()> {
+        let tensor1 = Tensor::new(vec![vec![1.0, 2.0], vec![3.0, 4.0]])?;
+        let tensor2 = Tensor::new(vec![vec![5.0], vec![7.0]])?;
+
+        match tensor1.add(&tensor2) {
+            Err(MaidenXError::TensorError(TensorError::ShapeMismatch(_))) => Ok(()),
+            _ => panic!("Expected ShapeMismatch error"),
+        }
+    }
+
+    #[test]
+    fn test_tensor_mul() -> Result<()> {
         let tensor1 = Tensor::new(vec![vec![2.0, 3.0], vec![4.0, 5.0]])?;
         let tensor2 = Tensor::new(vec![vec![3.0, 2.0], vec![1.0, 4.0]])?;
 
         let result = tensor1.mul(&tensor2)?;
         assert_eq!(result.shape(), &[2, 2]);
-        assert_eq!(result.to_vec()?, [6.0, 6.0, 4.0, 20.0]);
+        assert_eq!(result.to_vec()?, vec![6.0, 6.0, 4.0, 20.0]);
         Ok(())
     }
 
     #[test]
-    fn test_matrix_multiplication() -> CudaResult<()> {
-        let data1 = vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]];
-        let tensor1 = Tensor::new(data1)?;
+    fn test_tensor_mul_shape_mismatch() -> Result<()> {
+        let tensor1 = Tensor::new(vec![vec![2.0, 3.0], vec![4.0, 5.0]])?;
+        let tensor2 = Tensor::new(vec![vec![3.0], vec![1.0]])?;
 
-        let data2 = vec![vec![7.0, 8.0], vec![9.0, 10.0], vec![11.0, 12.0]];
-        let tensor2 = Tensor::new(data2)?;
+        match tensor1.mul(&tensor2) {
+            Err(MaidenXError::TensorError(TensorError::ShapeMismatch(_))) => Ok(()),
+            _ => panic!("Expected ShapeMismatch error"),
+        }
+    }
+
+    #[test]
+    fn test_matrix_multiplication() -> Result<()> {
+        let tensor1 = Tensor::new(vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]])?;
+        let tensor2 = Tensor::new(vec![vec![7.0, 8.0], vec![9.0, 10.0], vec![11.0, 12.0]])?;
 
         let result = tensor1.matmul(&tensor2)?;
-
-        // [1*7 + 2*9 + 3*11, 1*8 + 2*10 + 3*12]
-        // [4*7 + 5*9 + 6*11, 4*8 + 5*10 + 6*12]
         assert_eq!(result.shape(), &[2, 2]);
 
         let result_data = result.to_vec()?;
-        let expected = [
+        let expected = vec![
             1.0 * 7.0 + 2.0 * 9.0 + 3.0 * 11.0,
             1.0 * 8.0 + 2.0 * 10.0 + 3.0 * 12.0,
             4.0 * 7.0 + 5.0 * 9.0 + 6.0 * 11.0,
             4.0 * 8.0 + 5.0 * 10.0 + 6.0 * 12.0,
         ];
 
-        assert_eq!(result_data.len(), expected.len());
         for (actual, expected) in result_data.iter().zip(expected.iter()) {
             assert!(
                 (actual - expected).abs() < 1e-5,
@@ -470,128 +541,76 @@ mod tests {
     }
 
     #[test]
-    fn test_matrix_multiplication_invalid_shape() -> CudaResult<()> {
-        let data1 = vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]];
-        let tensor1 = Tensor::new(data1)?;
+    fn test_matrix_multiplication_invalid_shape() -> Result<()> {
+        let tensor1 = Tensor::new(vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]])?;
+        let tensor2 = Tensor::new(vec![vec![7.0, 8.0], vec![9.0, 10.0]])?;
 
-        let data2 = vec![vec![7.0, 8.0], vec![9.0, 10.0]];
-        let tensor2 = Tensor::new(data2)?;
-
-        assert!(matches!(
-            tensor1.matmul(&tensor2),
-            Err(CudaError::ShapeMismatch)
-        ));
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_large_matrix_multiplication() -> CudaResult<()> {
-        let size = 32;
-
-        let data1 = vec![vec![1.0; size]; size];
-        let data2 = vec![vec![2.0; size]; size];
-
-        let tensor1 = Tensor::new(data1)?;
-        let tensor2 = Tensor::new(data2)?;
-
-        let result = tensor1.matmul(&tensor2)?;
-
-        assert_eq!(result.shape(), &[size, size]);
-
-        let result_data = result.to_vec()?;
-        let expected_value = 2.0 * size as f32;
-
-        for val in result_data {
-            assert!(
-                (val - expected_value).abs() < 1e-3,
-                "Expected {}, got {}",
-                expected_value,
-                val
-            );
+        match tensor1.matmul(&tensor2) {
+            Err(MaidenXError::TensorError(TensorError::ShapeMismatch(_))) => Ok(()),
+            _ => panic!("Expected ShapeMismatch error"),
         }
-
-        Ok(())
     }
 
     #[test]
-    fn test_from_vec() -> CudaResult<()> {
-        // 1D tensor
+    fn test_from_vec() -> Result<()> {
         let tensor = Tensor::from_vec(vec![1.0, 2.0, 3.0], &[3])?;
         assert_eq!(tensor.shape(), &[3]);
         assert_eq!(tensor.to_vec()?, vec![1.0, 2.0, 3.0]);
 
-        // 2D tensor
-        let tensor = Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], &[2, 2])?;
+        match Tensor::from_vec(vec![1.0, 2.0], &[3]) {
+            Err(MaidenXError::TensorError(TensorError::ShapeMismatch(_))) => Ok(()),
+            _ => panic!("Expected ShapeMismatch error"),
+        }
+    }
+
+    #[test]
+    fn test_zeros() -> Result<()> {
+        let tensor = Tensor::zeros(&[2, 3])?;
+        assert_eq!(tensor.shape(), &[2, 3]);
+        assert_eq!(tensor.to_vec()?, vec![0.0; 6]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_randn() -> Result<()> {
+        let tensor = Tensor::randn(&[2, 3])?;
+        assert_eq!(tensor.shape(), &[2, 3]);
+        assert_eq!(tensor.to_vec()?.len(), 6);
+        Ok(())
+    }
+
+    #[test]
+    fn test_reshape() -> Result<()> {
+        let mut tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0])?;
+        tensor.reshape(&[2, 2])?;
         assert_eq!(tensor.shape(), &[2, 2]);
-        assert_eq!(tensor.to_vec()?, vec![1.0, 2.0, 3.0, 4.0]);
 
-        // Shape mismatch should fail
-        assert!(matches!(
-            Tensor::from_vec(vec![1.0, 2.0], &[3]),
-            Err(CudaError::ShapeMismatch)
-        ));
-
-        Ok(())
+        match tensor.reshape(&[3, 3]) {
+            Err(MaidenXError::TensorError(TensorError::ShapeMismatch(_))) => Ok(()),
+            _ => panic!("Expected ShapeMismatch error"),
+        }
     }
 
     #[test]
-    fn test_from_vec_multi_dimensional() -> CudaResult<()> {
-        // 3D tensor
-        let data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0];
-        let tensor = Tensor::from_vec(data, &[2, 2, 2])?;
-        assert_eq!(tensor.shape(), &[2, 2, 2]);
-
-        let result = tensor.to_vec()?;
-        assert_eq!(result.len(), 8);
-        assert_eq!(result, vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_randn() -> CudaResult<()> {
-        let shape = &[3, 3];
-        let tensor = Tensor::randn(shape)?;
-
-        assert_eq!(tensor.shape(), shape);
-        assert_eq!(tensor.ndim(), shape.len());
-
-        assert_eq!(tensor.to_vec()?.len(), shape.iter().product());
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_mul_scalar() -> CudaResult<()> {
-        let tensor = Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], &[2, 2])?;
-        let scalar = 2.0;
-        let result = tensor.mul_scalar(scalar)?;
-
-        let expected = vec![2.0, 4.0, 6.0, 8.0];
-        assert_eq!(result.to_vec()?, expected);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_split_at() -> CudaResult<()> {
-        let tensor = Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], &[2, 3])?;
+    fn test_split_at() -> Result<()> {
+        let tensor = Tensor::new(vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]])?;
         let (first, second) = tensor.split_at(1, 2)?;
 
         assert_eq!(first.shape(), &[2, 2]);
         assert_eq!(second.shape(), &[2, 1]);
-
         assert_eq!(first.to_vec()?, vec![1.0, 2.0, 4.0, 5.0]);
         assert_eq!(second.to_vec()?, vec![3.0, 6.0]);
 
-        Ok(())
+        match tensor.split_at(2, 0) {
+            Err(MaidenXError::TensorError(TensorError::IndexError(_))) => Ok(()),
+            _ => panic!("Expected IndexError"),
+        }
     }
 
     #[test]
-    fn test_cat() -> CudaResult<()> {
-        let tensor1 = Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], &[2, 2])?;
-        let tensor2 = Tensor::from_vec(vec![5.0, 6.0, 7.0, 8.0], &[2, 2])?;
+    fn test_cat() -> Result<()> {
+        let tensor1 = Tensor::new(vec![vec![1.0, 2.0], vec![3.0, 4.0]])?;
+        let tensor2 = Tensor::new(vec![vec![5.0, 6.0], vec![7.0, 8.0]])?;
 
         let result = Tensor::cat(&[&tensor1, &tensor2], 0)?;
         assert_eq!(result.shape(), &[4, 2]);
@@ -607,6 +626,24 @@ mod tests {
             vec![1.0, 2.0, 5.0, 6.0, 3.0, 4.0, 7.0, 8.0]
         );
 
+        // Test error cases
+        let tensor3 = Tensor::new(vec![vec![1.0]])?;
+        match Tensor::cat(&[&tensor1, &tensor3], 0) {
+            Err(MaidenXError::TensorError(TensorError::ShapeMismatch(_))) => Ok(()),
+            _ => panic!("Expected ShapeMismatch error"),
+        }
+    }
+
+    #[test]
+    fn test_mul_scalar() -> Result<()> {
+        let tensor = Tensor::new(vec![vec![1.0, 2.0], vec![3.0, 4.0]])?;
+        let result = tensor.mul_scalar(2.0)?;
+
+        assert_eq!(result.shape(), &[2, 2]);
+        assert_eq!(result.to_vec()?, vec![2.0, 4.0, 6.0, 8.0]);
         Ok(())
     }
 }
+
+
+

@@ -1,32 +1,32 @@
+use std::fmt;
+
 #[derive(Debug)]
 pub enum CudaError {
-    AllocationFailed,         // CUDA 메모리 할당 실패
-    DeallocationFailed,       // CUDA 메모리 해제 실패
-    MemcpyFailed,             // 메모리 복사 실패
-    KernelLaunchFailed,       // CUDA 커널 실행 실패
-    InvalidValue,             // 잘못된 값 입력
-    ShapeMismatch,            // 텐서 형상 불일치
-    InvalidSize,              // 메모리 크기 불일치
-    InvalidOperation(String), // 잘못된 연산 수행
-    InvalidArgument(String),
+    AllocationFailed,     // CUDA 메모리 할당 실패
+    DeallocationFailed,   // CUDA 메모리 해제 실패
+    MemcpyFailed,         // 메모리 복사 실패
+    KernelLaunchFailed,   // CUDA 커널 실행 실패
+    InvalidValue,         // 잘못된 값 입력
+    DeviceNotFound,       // CUDA 디바이스를 찾을 수 없음
+    InvalidDevice(i32),   // 잘못된 디바이스 인덱스
+    StreamCreationFailed, // CUDA 스트림 생성 실패
 }
 
-pub type CudaResult<T> = Result<T, CudaError>;
-
-impl std::fmt::Display for CudaError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+impl fmt::Display for CudaError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             CudaError::AllocationFailed => write!(f, "CUDA memory allocation failed"),
             CudaError::DeallocationFailed => write!(f, "CUDA memory deallocation failed"),
             CudaError::MemcpyFailed => write!(f, "CUDA memory copy failed"),
             CudaError::KernelLaunchFailed => write!(f, "CUDA kernel launch failed"),
-            CudaError::InvalidValue => write!(f, "Invalid value provided"),
-            CudaError::ShapeMismatch => write!(f, "Tensor shapes do not match"),
-            CudaError::InvalidSize => write!(f, "Buffer size mismatch"),
-            CudaError::InvalidOperation(msg) => write!(f, "Invalid operation: {}", msg),
-            CudaError::InvalidArgument(msg) => write!(f, "Invalid argument: {}", msg),
+            CudaError::InvalidValue => write!(f, "Invalid value provided to CUDA operation"),
+            CudaError::DeviceNotFound => write!(f, "No CUDA device available"),
+            CudaError::InvalidDevice(idx) => write!(f, "Invalid CUDA device index: {}", idx),
+            CudaError::StreamCreationFailed => write!(f, "Failed to create CUDA stream"),
         }
     }
 }
 
 impl std::error::Error for CudaError {}
+
+pub type CudaResult<T> = Result<T, CudaError>;

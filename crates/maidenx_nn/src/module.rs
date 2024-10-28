@@ -1,9 +1,9 @@
-use maidenx_cuda_core::error::CudaResult;
+use maidenx_core::error::{MaidenXError, Result};
 pub use maidenx_nn_macros::Module;
 use maidenx_tensor::Tensor;
 
 pub trait Module {
-    fn forward(&self, input: &Tensor) -> CudaResult<Tensor>;
+    fn forward(&self, input: &Tensor) -> Result<Tensor>;
     fn parameters(&self) -> Vec<Tensor>;
 }
 
@@ -22,10 +22,12 @@ impl ModuleBuilder {
         self
     }
 
-    pub fn forward(&self, input: &Tensor) -> CudaResult<Tensor> {
+    pub fn forward(&self, input: &Tensor) -> Result<Tensor> {
         let mut x = input.clone();
         for layer in &self.layers {
-            x = layer.forward(&x)?;
+            x = layer.forward(&x).map_err(|e| {
+                MaidenXError::InvalidOperation(format!("Layer forward pass failed: {}", e))
+            })?;
         }
         Ok(x)
     }

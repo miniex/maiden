@@ -9,11 +9,11 @@ pub use tanh::Tanh;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use maidenx_cuda_core::error::CudaResult;
+    use maidenx_core::error::Result;
     use maidenx_tensor::Tensor;
 
     #[test]
-    fn test_activation_shapes() -> CudaResult<()> {
+    fn test_activation_shapes() -> Result<()> {
         let input = Tensor::new(vec![vec![1.0, -1.0], vec![-2.0, 2.0]])?;
 
         // ReLU shape test

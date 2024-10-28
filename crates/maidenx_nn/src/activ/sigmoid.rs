@@ -1,5 +1,5 @@
 use crate::module::Module;
-use maidenx_cuda_core::error::CudaResult;
+use maidenx_core::error::{MaidenXError, Result};
 use maidenx_cuda_kernels::nn_ops::cuda_sigmoid_forward;
 use maidenx_tensor::Tensor;
 
@@ -18,7 +18,7 @@ impl Sigmoid {
         self
     }
 
-    pub fn forward(&self, input: &Tensor) -> CudaResult<Tensor> {
+    pub fn forward(&self, input: &Tensor) -> Result<Tensor> {
         let mut output = if self.inplace {
             input.clone()
         } else {
@@ -30,7 +30,8 @@ impl Sigmoid {
                 output.data_mut().as_mut_ptr(),
                 input.data().as_ptr(),
                 input.size(),
-            )?;
+            )
+            .map_err(MaidenXError::from)?;
         }
 
         output.reshape(input.shape())?;
@@ -46,12 +47,12 @@ impl Sigmoid {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use maidenx_cuda_core::error::CudaResult;
+    use maidenx_core::error::Result;
     use maidenx_tensor::Tensor;
     use std::f32;
 
     #[test]
-    fn test_sigmoid_forward() -> CudaResult<()> {
+    fn test_sigmoid_forward() -> Result<()> {
         let sigmoid = Sigmoid::new();
         let input = Tensor::new(vec![-2.0, -1.0, 0.0, 1.0, 2.0])?;
         let output = sigmoid.forward(&input)?;
@@ -71,7 +72,7 @@ mod tests {
     }
 
     #[test]
-    fn test_sigmoid_inplace() -> CudaResult<()> {
+    fn test_sigmoid_inplace() -> Result<()> {
         let sigmoid = Sigmoid::new().inplace(true);
         let input_data = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
         let input = Tensor::new(input_data.clone())?;

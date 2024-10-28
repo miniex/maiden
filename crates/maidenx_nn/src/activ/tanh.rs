@@ -1,5 +1,5 @@
 use crate::module::Module;
-use maidenx_cuda_core::error::CudaResult;
+use maidenx_core::error::{MaidenXError, Result};
 use maidenx_cuda_kernels::nn_ops::cuda_tanh_forward;
 use maidenx_tensor::Tensor;
 
@@ -18,7 +18,7 @@ impl Tanh {
         self
     }
 
-    pub fn forward(&self, input: &Tensor) -> CudaResult<Tensor> {
+    pub fn forward(&self, input: &Tensor) -> Result<Tensor> {
         let mut output = if self.inplace {
             input.clone()
         } else {
@@ -30,11 +30,11 @@ impl Tanh {
                 output.data_mut().as_mut_ptr(),
                 input.data().as_ptr(),
                 input.size(),
-            )?;
+            )
+            .map_err(MaidenXError::from)?;
         }
 
         output.reshape(input.shape())?;
-
         Ok(output)
     }
 
@@ -46,12 +46,12 @@ impl Tanh {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use maidenx_cuda_core::error::CudaResult;
+    use maidenx_core::error::Result;
     use maidenx_tensor::Tensor;
     use std::f32;
 
     #[test]
-    fn test_tanh_forward() -> CudaResult<()> {
+    fn test_tanh_forward() -> Result<()> {
         let tanh = Tanh::new();
         let input = Tensor::new(vec![-2.0, -1.0, 0.0, 1.0, 2.0])?;
         let output = tanh.forward(&input)?;
@@ -67,7 +67,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tanh_inplace() -> CudaResult<()> {
+    fn test_tanh_inplace() -> Result<()> {
         let tanh = Tanh::new().inplace(true);
         let input_data = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
         let input = Tensor::new(input_data.clone())?;
@@ -84,3 +84,4 @@ mod tests {
         Ok(())
     }
 }
+
