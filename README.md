@@ -24,10 +24,11 @@
 
 ### How to use
 
-|            | Using PyTorch                            | Using MaidenX                                                    |
-|------------|------------------------------------------|------------------------------------------------------------------|
-| Creation   | `torch.Tensor([[1, 2], [3, 4]])`         | `Tensor::new(vec![vec![1.0, 2.0], vec![3.0, 4.0]])`              |
-| Creation   | `torch.Tensor([[1, 2], [3, 4]])`         | `Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], &[2, 2])`            |
+|            | Using PyTorch                            | Using MaidenX                                                         |
+|------------|------------------------------------------|-----------------------------------------------------------------------|
+| Creation   | `torch.Tensor([[1, 2], [3, 4]])`         | `Tensor::new(vec![vec![1.0, 2.0], vec![3.0, 4.0]])`                   |
+| Creation   | `torch.Tensor([[1, 2], [3, 4]])`         | `Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], &[2, 2])`                 |
+| Creation   | `nn.Sequential(A, B, C)`                 | `nn::ModuleBuilder::new().add_layer(A).add_layer(B).add_layer(C)`     |
 
 ### Example
 
