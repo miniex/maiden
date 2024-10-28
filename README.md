@@ -87,6 +87,51 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+How to select device:
+*default: cpu*
+
+```rust
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Set CUDA if present on startup
+    if let Ok(cuda_device) = Device::cuda(0) {
+        set_current_device(cuda_device)?;
+    }
+    // all subsequent operations will use the set device
+    ...
+    Ok(())
+}
+```
+
+How to use `DeviceGuard`:
+
+```rust
+use maidenx::prelude::*;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+   // CPU
+   {
+       let _guard = DeviceGuard::new(Device::cpu())?;
+       
+       let a = Tensor::new(vec![1.0, 2.0, 3.0])?;
+       let b = Tensor::new(vec![4.0, 5.0, 6.0])?;
+       let c = a.add(&b)?;
+       println!("CPU Result: {}", c);
+   } // CPU guard drops here
+
+   // CUDA 
+   if let Ok(cuda_device) = Device::cuda(0) {
+       let _guard = DeviceGuard::new(cuda_device)?;
+       
+       let x = Tensor::new(vec![1.0, 2.0, 3.0])?;
+       let y = Tensor::new(vec![4.0, 5.0, 6.0])?;
+       let z = x.add(&y)?;
+       println!("CUDA Result: {}", z);
+   } // CUDA guard drops here
+
+   Ok(())
+}
+```
+
 For more examples, see [`examples`](examples/).
 
 ## Development Setup

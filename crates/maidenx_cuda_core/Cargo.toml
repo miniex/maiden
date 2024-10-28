@@ -1,6 +1,6 @@
 [package]
 name = "maidenx_cuda_core"
-version = "0.0.4-dev"
+version = "0.0.4"
 description = "MaidenX CUDA Core"
 license = "MIT OR Apache-2.0"
 authors = ["Han Damin <miniex@daminstudio.net>"]
@@ -9,4 +9,4 @@ publish = true
 repository = "https://github.com/miniex/maidenx"
 
 [dependencies]
-maidenx_cuda_sys = { path = "../maidenx_cuda_sys", version = "0.0.4-dev" }
+maidenx_cuda_sys = { path = "../maidenx_cuda_sys", version = "0.0.4" }
