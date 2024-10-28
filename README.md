@@ -1,14 +1,22 @@
 <div align="center">
     <h1>MaidenX</h1>
     <p>Rust-based CUDA library designed for learning purposes and building my AI engines named Maiden Engine</p>
-    <strong>🚧 This project is for personal learning and testing purposes, so it may not function properly. 🚧</strong>
+    
+[![License](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)](https://github.com/miniex/maidenx#license)
+[![Crates.io](https://img.shields.io/crates/v/maidenx.svg)](https://crates.io/crates/maidenx)
     <h3>
         <a href="TODOS.md">TODOS</a>
     </h3>
 </div>
 
-[![License](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)](https://github.com/miniex/maidenx#license)
-[![Crates.io](https://img.shields.io/crates/v/maidenx.svg)](https://crates.io/crates/maidenx)
+> [!NOTE]  
+> This project is structured to resemble the PyTorch framework where possible, to aid in familiarization and learning.
+
+> [!IMPORTANT]  
+> This crate is being developed for use in the Maiden Engine.
+
+> [!WARNING]
+> 🚧 This project is for personal learning and testing purposes, so it may not function properly. 🚧
 
 ## Getting Started
 
