@@ -1,5 +1,11 @@
 # TODOS
 
+## Under Consideration
+
+- [ ] Add CPU computation processing capability
+- [ ] Add MPS (Metal Performance Shaders) GPU acceleration support 
+- [ ] Add compatibility with .pth (PyTorch) model files
+
 ## Roadmap
 
 ### Phase 1: Core Operations (High Priority)
