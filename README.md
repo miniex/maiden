@@ -12,9 +12,6 @@
 > [!NOTE]  
 > This project is structured to resemble the PyTorch framework where possible, to aid in familiarization and learning.
 
-> [!IMPORTANT]  
-> This crate is being developed for use in the Maiden Engine.
-
 > [!WARNING]
 > 🚧 This project is for personal learning and testing purposes, so it may not function properly. 🚧
 
