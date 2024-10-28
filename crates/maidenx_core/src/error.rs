@@ -1,3 +1,4 @@
+use crate::device::DeviceError;
 use maidenx_cuda_core::error::CudaError;
 use std::fmt;
 
@@ -17,8 +18,7 @@ pub enum MaidenXError {
     BufferSizeMismatch(String),
 
     // Device
-    DeviceError(String),
-    UnsupportedDevice(String),
+    Device(DeviceError),
 
     // Tensor
     TensorError(TensorError),
@@ -64,8 +64,7 @@ impl fmt::Display for MaidenXError {
             MaidenXError::InvalidSize(msg) => write!(f, "Invalid size: {}", msg),
             MaidenXError::OutOfMemory(msg) => write!(f, "Out of memory: {}", msg),
             MaidenXError::BufferSizeMismatch(msg) => write!(f, "Buffer size mismatch: {}", msg),
-            MaidenXError::DeviceError(msg) => write!(f, "Device error: {}", msg),
-            MaidenXError::UnsupportedDevice(msg) => write!(f, "Unsupported device: {}", msg),
+            MaidenXError::Device(err) => write!(f, "Device error: {}", err),
             MaidenXError::TensorError(err) => write!(f, "Tensor error: {}", err),
             MaidenXError::Cuda(err) => write!(f, "CUDA error: {}", err),
             MaidenXError::IoError(err) => write!(f, "IO error: {}", err),
@@ -81,6 +80,12 @@ impl std::error::Error for MaidenXError {
             MaidenXError::IoError(err) => Some(err),
             _ => None,
         }
+    }
+}
+
+impl From<DeviceError> for MaidenXError {
+    fn from(err: DeviceError) -> Self {
+        MaidenXError::Device(err)
     }
 }
 

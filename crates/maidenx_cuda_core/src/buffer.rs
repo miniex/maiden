@@ -1,4 +1,5 @@
 use crate::error::{CudaError, CudaResult};
+use maidenx_cuda_sys as sys;
 use std::{fmt, mem, ptr::NonNull};
 
 #[derive(Clone)]
@@ -19,7 +20,7 @@ impl fmt::Debug for CudaBuffer {
 impl CudaBuffer {
     pub fn new(size: usize) -> CudaResult<Self> {
         let mut ptr = std::ptr::null_mut();
-        let result = unsafe { maidenx_cuda_sys::cudaMalloc(&mut ptr, size) };
+        let result = unsafe { sys::cudaMalloc(&mut ptr, size) };
         if result != 0 {
             return Err(CudaError::AllocationFailed);
         }
@@ -33,16 +34,14 @@ impl CudaBuffer {
         if mem::size_of_val(data) > self.size {
             return Err(CudaError::InvalidValue);
         }
-
         let result = unsafe {
-            maidenx_cuda_sys::cudaMemcpy(
+            sys::cudaMemcpy(
                 self.ptr.as_ptr() as *mut std::ffi::c_void,
                 data.as_ptr() as *const std::ffi::c_void,
                 mem::size_of_val(data),
-                maidenx_cuda_sys::cudaMemcpyKind::cudaMemcpyHostToDevice,
+                sys::cudaMemcpyKind::cudaMemcpyHostToDevice,
             )
         };
-
         if result != 0 {
             return Err(CudaError::MemcpyFailed);
         }
@@ -53,16 +52,14 @@ impl CudaBuffer {
         if mem::size_of_val(data) > self.size {
             return Err(CudaError::InvalidValue);
         }
-
         let result = unsafe {
-            maidenx_cuda_sys::cudaMemcpy(
+            sys::cudaMemcpy(
                 data.as_mut_ptr() as *mut std::ffi::c_void,
                 self.ptr.as_ptr() as *const std::ffi::c_void,
                 mem::size_of_val(data),
-                maidenx_cuda_sys::cudaMemcpyKind::cudaMemcpyDeviceToHost,
+                sys::cudaMemcpyKind::cudaMemcpyDeviceToHost,
             )
         };
-
         if result != 0 {
             return Err(CudaError::MemcpyFailed);
         }
@@ -89,7 +86,7 @@ impl CudaBuffer {
 impl Drop for CudaBuffer {
     fn drop(&mut self) {
         unsafe {
-            let result = maidenx_cuda_sys::cudaFree(self.ptr.as_ptr() as *mut std::ffi::c_void);
+            let result = sys::cudaFree(self.ptr.as_ptr() as *mut std::ffi::c_void);
             if result != 0 {
                 eprintln!("Warning: cudaFree failed for CudaBuffer during drop");
             }
