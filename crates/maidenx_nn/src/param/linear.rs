@@ -123,7 +123,17 @@ impl Bilinear {
         })
     }
 
-    pub fn forward(&self, input1: &Tensor, input2: &Tensor) -> CudaResult<Tensor> {
+    pub fn forward(&self, input: &Tensor) -> CudaResult<Tensor> {
+        let total_features = self.in1_features + self.in2_features;
+        if input.shape()[1] != total_features {
+            return Err(CudaError::ShapeMismatch);
+        }
+
+        let (input1, input2) = input.split_at(1, self.in1_features)?;
+        self.forward_bilinear(&input1, &input2)
+    }
+
+    pub fn forward_bilinear(&self, input1: &Tensor, input2: &Tensor) -> CudaResult<Tensor> {
         let batch_size = input1.size_dim(0).unwrap_or(1);
         let mut output = Tensor::zeros(&[batch_size, self.out_features])?;
 
@@ -246,7 +256,7 @@ mod tests {
 
         let input1 = Tensor::from_vec(vec![1.0f32], &[1, 1])?;
         let input2 = Tensor::from_vec(vec![1.0f32], &[1, 1])?;
-        let output = bilinear.forward(&input1, &input2)?;
+        let output = bilinear.forward_bilinear(&input1, &input2)?;
 
         assert_eq!(output.shape(), &[1, 1]);
         Ok(())
@@ -271,7 +281,7 @@ mod tests {
 
         let input1 = Tensor::from_vec(vec![2.0f32], &[1, 1])?;
         let input2 = Tensor::from_vec(vec![2.0f32], &[1, 1])?;
-        let output = bilinear.forward(&input1, &input2)?;
+        let output = bilinear.forward_bilinear(&input1, &input2)?;
 
         let output_vec = output.to_vec()?;
         let expected = 0.1 + (2.0 * 2.0 * 0.5);

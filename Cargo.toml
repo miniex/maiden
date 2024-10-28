@@ -27,5 +27,9 @@ name = "tensor_matmul"
 path = "examples/tensor/tensor_matmul.rs"
 
 [[example]]
+name = "module_builder"
+path = "examples/nn/module_builder.rs"
+
+[[example]]
 name = "nn_linear"
 path = "examples/nn/nn_linear.rs"

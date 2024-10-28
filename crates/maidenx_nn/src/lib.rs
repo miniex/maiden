@@ -1,9 +1,9 @@
-pub mod activation;
-pub mod layer;
+pub mod activ;
 pub mod module;
+pub mod param;
 
 pub use crate::{
-    activation::{ReLU, Sigmoid, Tanh},
-    layer::{Bilinear, Linear},
-    module::Module,
+    activ::{ReLU, Sigmoid, Tanh},
+    module::{Module, ModuleBuilder},
+    param::{Bilinear, Linear},
 };

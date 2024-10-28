@@ -1,12 +1,14 @@
 #[derive(Debug)]
 pub enum CudaError {
-    AllocationFailed,   // CUDA 메모리 할당 실패
-    DeallocationFailed, // CUDA 메모리 해제 실패
-    MemcpyFailed,       // 메모리 복사 실패
-    KernelLaunchFailed, // CUDA 커널 실행 실패
-    InvalidValue,       // 잘못된 값 입력
-    ShapeMismatch,      // 텐서 형상 불일치
-    InvalidSize,        // 메모리 크기 불일치
+    AllocationFailed,         // CUDA 메모리 할당 실패
+    DeallocationFailed,       // CUDA 메모리 해제 실패
+    MemcpyFailed,             // 메모리 복사 실패
+    KernelLaunchFailed,       // CUDA 커널 실행 실패
+    InvalidValue,             // 잘못된 값 입력
+    ShapeMismatch,            // 텐서 형상 불일치
+    InvalidSize,              // 메모리 크기 불일치
+    InvalidOperation(String), // 잘못된 연산 수행
+    InvalidArgument(String),
 }
 
 pub type CudaResult<T> = Result<T, CudaError>;
@@ -21,6 +23,8 @@ impl std::fmt::Display for CudaError {
             CudaError::InvalidValue => write!(f, "Invalid value provided"),
             CudaError::ShapeMismatch => write!(f, "Tensor shapes do not match"),
             CudaError::InvalidSize => write!(f, "Buffer size mismatch"),
+            CudaError::InvalidOperation(msg) => write!(f, "Invalid operation: {}", msg),
+            CudaError::InvalidArgument(msg) => write!(f, "Invalid argument: {}", msg),
         }
     }
 }

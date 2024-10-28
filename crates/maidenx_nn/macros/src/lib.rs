@@ -20,11 +20,11 @@ pub fn derive_module(input: TokenStream) -> TokenStream {
         impl #impl_generics #maidenx_nn_path::module::Module for #name #ty_generics #where_clause {
             fn forward(&self, input: &#maidenx_tensor_path::Tensor)
                 -> #maidenx_cuda_core_path::error::CudaResult<#maidenx_tensor_path::Tensor> {
-                unimplemented!();
+                self.forward(input)
             }
 
             fn parameters(&self) -> Vec<#maidenx_tensor_path::Tensor> {
-                vec![]
+                self.parameters()
             }
         }
     };

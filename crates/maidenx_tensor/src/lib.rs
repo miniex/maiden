@@ -1,4 +1,5 @@
 mod convert;
+mod display;
 
 use convert::TensorData;
 use maidenx_cuda_core::prelude::{CudaBuffer, CudaError, CudaResult};
@@ -23,11 +24,11 @@ impl fmt::Display for Tensor {
         };
 
         match self.shape.len() {
-            1 => display_1d(f, &data, &self.shape),
-            2 => display_2d(f, &data, &self.shape),
-            3 => display_3d(f, &data, &self.shape),
-            4 => display_4d(f, &data, &self.shape),
-            _ => display_nd(f, &data, &self.shape),
+            1 => display::display_1d(f, &data, &self.shape),
+            2 => display::display_2d(f, &data, &self.shape),
+            3 => display::display_3d(f, &data, &self.shape),
+            4 => display::display_4d(f, &data, &self.shape),
+            _ => display::display_nd(f, &data, &self.shape),
         }
     }
 }
@@ -266,148 +267,89 @@ impl Tensor {
 
         Ok(result)
     }
-}
 
-// Display
-
-fn display_1d(f: &mut fmt::Formatter<'_>, data: &[f32], shape: &[usize]) -> fmt::Result {
-    write!(f, "Tensor(shape=[{}], data=", shape[0])?;
-    write!(f, "[")?;
-    for (i, val) in data.iter().enumerate() {
-        if i > 0 {
-            write!(f, ", ")?
+    pub fn split_at(&self, dim: usize, index: usize) -> CudaResult<(Tensor, Tensor)> {
+        if dim >= self.shape.len() {
+            return Err(CudaError::InvalidArgument("Dimension out of bounds".into()));
         }
-        write!(f, "{:.4}", val)?;
-    }
-    write!(f, "])")
-}
-
-fn display_2d(f: &mut fmt::Formatter<'_>, data: &[f32], shape: &[usize]) -> fmt::Result {
-    writeln!(f, "Tensor(shape=[{}, {}], data=", shape[0], shape[1])?;
-    for i in 0..shape[0] {
-        if i == 0 {
-            write!(f, "[")?;
+        if index >= self.shape[dim] {
+            return Err(CudaError::InvalidArgument(
+                "Split index out of bounds".into(),
+            ));
         }
-        write!(f, "[")?;
-        for j in 0..shape[1] {
-            if j > 0 {
-                write!(f, ", ")?
+
+        let mut first_shape = self.shape.clone();
+        let mut second_shape = self.shape.clone();
+        first_shape[dim] = index;
+        second_shape[dim] = self.shape[dim] - index;
+
+        let data = self.to_vec()?;
+        let mut first_data = Vec::new();
+        let mut second_data = Vec::new();
+
+        if dim == 0 {
+            let split_point = index * self.strides[0];
+            first_data = data[..split_point].to_vec();
+            second_data = data[split_point..].to_vec();
+        } else if dim == 1 {
+            let rows = self.shape[0];
+            let cols = self.shape[1];
+            for i in 0..rows {
+                let row_start = i * cols;
+                first_data.extend_from_slice(&data[row_start..row_start + index]);
+                second_data.extend_from_slice(&data[row_start + index..row_start + cols]);
             }
-            write!(f, "{:.4}", data[i * shape[1] + j])?;
         }
-        if i == shape[0] - 1 {
-            writeln!(f, "]])")?;
-        } else {
-            writeln!(f, "]")?;
-        }
+
+        Ok((
+            Tensor::from_vec(first_data, &first_shape)?,
+            Tensor::from_vec(second_data, &second_shape)?,
+        ))
     }
-    Ok(())
-}
 
-fn display_3d(f: &mut fmt::Formatter<'_>, data: &[f32], shape: &[usize]) -> fmt::Result {
-    writeln!(
-        f,
-        "Tensor(shape=[{}, {}, {}], data=",
-        shape[0], shape[1], shape[2]
-    )?;
-    let plane_size = shape[1] * shape[2];
-
-    write!(f, "[")?;
-    for i in 0..shape[0] {
-        if i > 0 {
-            writeln!(f)?;
+    pub fn cat(tensors: &[&Tensor], dim: usize) -> CudaResult<Tensor> {
+        if tensors.is_empty() {
+            return Err(CudaError::InvalidArgument("Empty tensor list".into()));
         }
-        write!(f, "[")?;
-        for j in 0..shape[1] {
-            if j > 0 {
-                writeln!(f)?;
+
+        let first = &tensors[0];
+        let mut target_shape = first.shape.clone();
+
+        for tensor in tensors.iter().skip(1) {
+            if tensor.shape.len() != first.shape.len() {
+                return Err(CudaError::ShapeMismatch);
             }
-            write!(f, "[")?;
-            for k in 0..shape[2] {
-                if k > 0 {
-                    write!(f, ", ")?
+            for (i, (&s1, &s2)) in first.shape.iter().zip(tensor.shape.iter()).enumerate() {
+                if i != dim && s1 != s2 {
+                    return Err(CudaError::ShapeMismatch);
                 }
-                write!(f, "{:.4}", data[i * plane_size + j * shape[2] + k])?;
             }
-            write!(f, "]")?;
         }
-        if i == shape[0] - 1 {
-            write!(f, "]])")?;
-        } else {
-            write!(f, "]")?;
-        }
-    }
-    Ok(())
-}
 
-fn display_4d(f: &mut fmt::Formatter<'_>, data: &[f32], shape: &[usize]) -> fmt::Result {
-    writeln!(
-        f,
-        "Tensor(shape=[{}, {}, {}, {}], data=",
-        shape[0], shape[1], shape[2], shape[3]
-    )?;
-    let volume_size = shape[1] * shape[2] * shape[3];
-    let plane_size = shape[2] * shape[3];
+        target_shape[dim] = tensors.iter().map(|t| t.shape[dim]).sum();
 
-    write!(f, "[")?;
-    for w in 0..shape[0] {
-        if w > 0 {
-            writeln!(f, ",")?;
-        }
-        write!(f, "[")?;
-        for x in 0..shape[1] {
-            if x > 0 {
-                writeln!(f)?;
+        if dim == 0 {
+            let mut result_data = Vec::new();
+            for tensor in tensors {
+                result_data.extend(tensor.to_vec()?);
             }
-            write!(f, "[")?;
-            for y in 0..shape[2] {
-                if y > 0 {
-                    writeln!(f)?;
+            Tensor::from_vec(result_data, &target_shape)
+        } else if dim == 1 {
+            let rows = target_shape[0];
+            let mut result_data = Vec::new();
+            for row in 0..rows {
+                for tensor in tensors {
+                    let data = tensor.to_vec()?;
+                    let row_start = row * tensor.shape[1];
+                    let row_end = row_start + tensor.shape[1];
+                    result_data.extend_from_slice(&data[row_start..row_end]);
                 }
-                write!(f, "[")?;
-                for z in 0..shape[3] {
-                    if z > 0 {
-                        write!(f, ", ")?
-                    }
-                    write!(
-                        f,
-                        "{:.4}",
-                        data[w * volume_size + x * plane_size + y * shape[3] + z]
-                    )?;
-                }
-                write!(f, "]")?;
             }
-            write!(f, "]")?;
-        }
-        if w == shape[0] - 1 {
-            write!(f, "]])")?;
+            Tensor::from_vec(result_data, &target_shape)
         } else {
-            write!(f, "]")?;
+            Err(CudaError::InvalidArgument("Unsupported dimension".into()))
         }
     }
-    Ok(())
-}
-
-fn display_nd(f: &mut fmt::Formatter<'_>, data: &[f32], shape: &[usize]) -> fmt::Result {
-    write!(f, "Tensor(shape=[")?;
-    for (i, &dim) in shape.iter().enumerate() {
-        if i > 0 {
-            write!(f, ", ")?
-        }
-        write!(f, "{}", dim)?;
-    }
-    write!(f, "], data=[")?;
-    for (i, val) in data.iter().enumerate() {
-        if i > 0 {
-            write!(f, ", ")?
-        }
-        if i >= 8 {
-            write!(f, "...")?;
-            break;
-        }
-        write!(f, "{:.4}", val)?;
-    }
-    write!(f, "])")
 }
 
 #[cfg(test)]
@@ -628,6 +570,42 @@ mod tests {
 
         let expected = vec![2.0, 4.0, 6.0, 8.0];
         assert_eq!(result.to_vec()?, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_split_at() -> CudaResult<()> {
+        let tensor = Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0], &[2, 3])?;
+        let (first, second) = tensor.split_at(1, 2)?;
+
+        assert_eq!(first.shape(), &[2, 2]);
+        assert_eq!(second.shape(), &[2, 1]);
+
+        assert_eq!(first.to_vec()?, vec![1.0, 2.0, 4.0, 5.0]);
+        assert_eq!(second.to_vec()?, vec![3.0, 6.0]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_cat() -> CudaResult<()> {
+        let tensor1 = Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], &[2, 2])?;
+        let tensor2 = Tensor::from_vec(vec![5.0, 6.0, 7.0, 8.0], &[2, 2])?;
+
+        let result = Tensor::cat(&[&tensor1, &tensor2], 0)?;
+        assert_eq!(result.shape(), &[4, 2]);
+        assert_eq!(
+            result.to_vec()?,
+            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+        );
+
+        let result = Tensor::cat(&[&tensor1, &tensor2], 1)?;
+        assert_eq!(result.shape(), &[2, 4]);
+        assert_eq!(
+            result.to_vec()?,
+            vec![1.0, 2.0, 5.0, 6.0, 3.0, 4.0, 7.0, 8.0]
+        );
 
         Ok(())
     }
