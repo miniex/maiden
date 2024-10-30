@@ -244,6 +244,18 @@ mod tests {
     }
 
     #[test]
+    fn test_pow() -> Result<()> {
+        let tensor1 = Tensor::new(vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]])?;
+        let exponent = 2.0;
+
+        let result = tensor1.pow(exponent)?;
+
+        assert_eq!(result.to_vec()?, vec![1.0, 4.0, 9.0, 16.0, 25.0, 36.0]);
+
+        Ok(())
+    }
+
+    #[test]
     fn test_matrix_multiplication_invalid_shape() -> Result<()> {
         let tensor1 = Tensor::new(vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]])?;
         let tensor2 = Tensor::new(vec![vec![7.0, 8.0], vec![9.0, 10.0]])?;

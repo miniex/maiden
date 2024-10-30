@@ -13,6 +13,7 @@ extern "C" {
         k: i32,
     );
     fn tensor_mul(output: *mut f32, input1: *const f32, input2: *const f32, size: usize);
+    fn tensor_pow(output: *mut f32, input: *const f32, exponent: f32, size: usize);
     fn tensor_scalar_mul(output: *mut f32, input: *const f32, scalar: f32, size: usize);
 }
 
@@ -102,6 +103,33 @@ pub unsafe fn cuda_tensor_mat_mul(
 ) -> CudaResult<()> {
     tensor_mat_mul(output, input1, input2, m, n, k);
     // TODO add CUDA Error check
+    Ok(())
+}
+
+/// Performs element-wise power operation on a tensor on CUDA device.
+///
+/// # Arguments
+///
+/// * `output` - Pointer to the output buffer on CUDA device
+/// * `input` - Pointer to the input buffer on CUDA device  
+/// * `exponent` - The power to raise each element to
+/// * `size` - Number of elements to process
+///
+/// # Safety
+///
+/// Caller must ensure that:
+/// * All pointers point to valid memory on the CUDA device
+/// * `output` buffer has enough space for `size` elements
+/// * `input` buffer contains at least `size` elements
+/// * Memory regions do not overlap
+/// * All memory is properly aligned for f32
+pub unsafe fn cuda_tensor_pow(
+    output: *mut f32,
+    input: *const f32,
+    exponent: f32,
+    size: usize,
+) -> CudaResult<()> {
+    tensor_pow(output, input, exponent, size);
     Ok(())
 }
 
@@ -358,6 +386,36 @@ mod tests {
             );
         }
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_tensor_pow() -> CudaResult<()> {
+        let size = 1024;
+        let exponent = 2.0;
+        let mut output_buf = CudaBuffer::new(size * std::mem::size_of::<f32>())?;
+        let mut input_buf = CudaBuffer::new(size * std::mem::size_of::<f32>())?;
+
+        let input_data: Vec<f32> = vec![2.0; size];
+        input_buf.copy_from_host(&input_data)?;
+
+        unsafe {
+            cuda_tensor_pow(output_buf.as_mut_ptr(), input_buf.as_ptr(), exponent, size)?;
+        }
+
+        let mut output_data = vec![0.0f32; size];
+        output_buf.copy_to_host(&mut output_data)?;
+
+        let expected_value = 4.0; // 2^2
+        for (i, &val) in output_data.iter().enumerate() {
+            assert!(
+                (val - expected_value).abs() < 1e-5,
+                "Mismatch at position {}: expected {}, got {}",
+                i,
+                expected_value,
+                val
+            );
+        }
         Ok(())
     }
 

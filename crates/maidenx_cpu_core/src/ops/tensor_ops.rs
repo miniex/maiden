@@ -46,6 +46,10 @@ pub fn mul(a: &[f32], b: &[f32]) -> CpuResult<Vec<f32>> {
     Ok(a.iter().zip(b.iter()).map(|(x, y)| x * y).collect())
 }
 
+pub fn pow(a: &[f32], exponent: f32) -> CpuResult<Vec<f32>> {
+    Ok(a.iter().map(|x| x.powf(exponent)).collect())
+}
+
 pub fn scalar_mul(a: &[f32], scalar: f32) -> CpuResult<Vec<f32>> {
     Ok(a.iter().map(|x| x * scalar).collect())
 }
