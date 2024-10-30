@@ -7,7 +7,8 @@ use maidenx_core::{
 #[cfg(feature = "cuda")]
 use maidenx_cuda_kernels::tensor_ops::{
     cuda_tensor_add, cuda_tensor_div, cuda_tensor_mat_mul, cuda_tensor_mean, cuda_tensor_mul,
-    cuda_tensor_pow, cuda_tensor_scalar_mul, cuda_tensor_sum, cuda_tensor_transpose,
+    cuda_tensor_pow, cuda_tensor_scalar_add, cuda_tensor_scalar_div, cuda_tensor_scalar_mul,
+    cuda_tensor_scalar_sub, cuda_tensor_sub, cuda_tensor_sum, cuda_tensor_transpose,
 };
 use std::cell::RefCell;
 
@@ -287,6 +288,80 @@ impl Tensor {
         Ok(result)
     }
 
+    pub fn scalar_add(&self, scalar: f32) -> Result<Self> {
+        let device = maidenx_core::device::get_current_device();
+        let mut result = Self {
+            buffer: DeviceBuffer::new(self.buffer.len(), &device)?,
+            shape: self.shape.clone(),
+            strides: self.strides.clone(),
+            grad: RefCell::new(None),
+            requires_grad: self.requires_grad,
+        };
+
+        match &device {
+            Device::Cpu => {
+                let data = self.to_vec()?;
+                let result_data = maidenx_cpu_core::ops::tensor_ops::scalar_add(&data, scalar)?;
+                result.buffer.copy_from_host(&result_data)?;
+            }
+            Device::Cuda(_) => {
+                #[cfg(feature = "cuda")]
+                unsafe {
+                    cuda_tensor_scalar_add(
+                        result.buffer.as_mut_ptr(),
+                        self.buffer.as_ptr(),
+                        scalar,
+                        self.size(),
+                    )
+                    .map_err(MaidenXError::from)?;
+                }
+                #[cfg(not(feature = "cuda"))]
+                return Err(MaidenXError::UnsupportedOperation(
+                    "CUDA operations are not available - feature not enabled".into(),
+                ));
+            }
+        }
+
+        Ok(result)
+    }
+
+    pub fn scalar_div(&self, scalar: f32) -> Result<Self> {
+        let device = maidenx_core::device::get_current_device();
+        let mut result = Self {
+            buffer: DeviceBuffer::new(self.buffer.len(), &device)?,
+            shape: self.shape.clone(),
+            strides: self.strides.clone(),
+            grad: RefCell::new(None),
+            requires_grad: self.requires_grad,
+        };
+
+        match &device {
+            Device::Cpu => {
+                let data = self.to_vec()?;
+                let result_data = maidenx_cpu_core::ops::tensor_ops::scalar_div(&data, scalar)?;
+                result.buffer.copy_from_host(&result_data)?;
+            }
+            Device::Cuda(_) => {
+                #[cfg(feature = "cuda")]
+                unsafe {
+                    cuda_tensor_scalar_div(
+                        result.buffer.as_mut_ptr(),
+                        self.buffer.as_ptr(),
+                        scalar,
+                        self.size(),
+                    )
+                    .map_err(MaidenXError::from)?;
+                }
+                #[cfg(not(feature = "cuda"))]
+                return Err(MaidenXError::UnsupportedOperation(
+                    "CUDA operations are not available - feature not enabled".into(),
+                ));
+            }
+        }
+
+        Ok(result)
+    }
+
     pub fn scalar_mul(&self, scalar: f32) -> Result<Self> {
         let device = maidenx_core::device::get_current_device();
         let mut result = Self {
@@ -299,12 +374,9 @@ impl Tensor {
 
         match &device {
             Device::Cpu => {
-                let data = self
-                    .to_vec()?
-                    .iter()
-                    .map(|x| x * scalar)
-                    .collect::<Vec<f32>>();
-                result.buffer.copy_from_host(&data)?;
+                let data = self.to_vec()?;
+                let result_data = maidenx_cpu_core::ops::tensor_ops::scalar_mul(&data, scalar)?;
+                result.buffer.copy_from_host(&result_data)?;
             }
             Device::Cuda(_) => {
                 #[cfg(feature = "cuda")]
@@ -313,6 +385,89 @@ impl Tensor {
                         result.buffer.as_mut_ptr(),
                         self.buffer.as_ptr(),
                         scalar,
+                        self.size(),
+                    )
+                    .map_err(MaidenXError::from)?;
+                }
+                #[cfg(not(feature = "cuda"))]
+                return Err(MaidenXError::UnsupportedOperation(
+                    "CUDA operations are not available - feature not enabled".into(),
+                ));
+            }
+        }
+
+        Ok(result)
+    }
+
+    pub fn scalar_sub(&self, scalar: f32) -> Result<Self> {
+        let device = maidenx_core::device::get_current_device();
+        let mut result = Self {
+            buffer: DeviceBuffer::new(self.buffer.len(), &device)?,
+            shape: self.shape.clone(),
+            strides: self.strides.clone(),
+            grad: RefCell::new(None),
+            requires_grad: self.requires_grad,
+        };
+
+        match &device {
+            Device::Cpu => {
+                let data = self.to_vec()?;
+                let result_data = maidenx_cpu_core::ops::tensor_ops::scalar_sub(&data, scalar)?;
+                result.buffer.copy_from_host(&result_data)?;
+            }
+            Device::Cuda(_) => {
+                #[cfg(feature = "cuda")]
+                unsafe {
+                    cuda_tensor_scalar_sub(
+                        result.buffer.as_mut_ptr(),
+                        self.buffer.as_ptr(),
+                        scalar,
+                        self.size(),
+                    )
+                    .map_err(MaidenXError::from)?;
+                }
+                #[cfg(not(feature = "cuda"))]
+                return Err(MaidenXError::UnsupportedOperation(
+                    "CUDA operations are not available - feature not enabled".into(),
+                ));
+            }
+        }
+
+        Ok(result)
+    }
+
+    pub fn sub(&self, other: &Tensor) -> Result<Tensor> {
+        if self.shape != other.shape {
+            return Err(TensorError::ShapeMismatch(format!(
+                "Cannot add tensors with shapes {:?} and {:?}",
+                self.shape, other.shape
+            ))
+            .into());
+        }
+
+        let device = maidenx_core::device::get_current_device();
+        let mut result = Self {
+            buffer: DeviceBuffer::new(self.buffer.len(), &device)?,
+            shape: self.shape.clone(),
+            strides: self.strides.clone(),
+            grad: RefCell::new(None),
+            requires_grad: self.requires_grad || other.requires_grad,
+        };
+
+        match &device {
+            Device::Cpu => {
+                let a = self.to_vec()?;
+                let b = other.to_vec()?;
+                let result_data = maidenx_cpu_core::ops::tensor_ops::sub(&a, &b)?;
+                result.buffer.copy_from_host(&result_data)?;
+            }
+            Device::Cuda(_) => {
+                #[cfg(feature = "cuda")]
+                unsafe {
+                    cuda_tensor_sub(
+                        result.buffer.as_mut_ptr(),
+                        self.buffer.as_ptr(),
+                        other.buffer.as_ptr(),
                         self.size(),
                     )
                     .map_err(MaidenXError::from)?;

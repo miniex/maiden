@@ -58,8 +58,32 @@ pub fn pow(a: &[f32], exponent: f32) -> CpuResult<Vec<f32>> {
     Ok(a.iter().map(|x| x.powf(exponent)).collect())
 }
 
+pub fn scalar_add(a: &[f32], scalar: f32) -> CpuResult<Vec<f32>> {
+    Ok(a.iter().map(|x| x + scalar).collect())
+}
+
+pub fn scalar_sub(a: &[f32], scalar: f32) -> CpuResult<Vec<f32>> {
+    Ok(a.iter().map(|x| x - scalar).collect())
+}
+
 pub fn scalar_mul(a: &[f32], scalar: f32) -> CpuResult<Vec<f32>> {
     Ok(a.iter().map(|x| x * scalar).collect())
+}
+
+pub fn scalar_div(a: &[f32], scalar: f32) -> CpuResult<Vec<f32>> {
+    if scalar == 0.0 {
+        return Err(CpuError::InvalidValue);
+    }
+
+    Ok(a.iter().map(|x| x / scalar).collect())
+}
+
+pub fn sub(a: &[f32], b: &[f32]) -> CpuResult<Vec<f32>> {
+    if a.len() != b.len() {
+        return Err(CpuError::InvalidValue);
+    }
+
+    Ok(a.iter().zip(b.iter()).map(|(x, y)| x - y).collect())
 }
 
 pub fn sum(a: &[f32]) -> CpuResult<Vec<f32>> {
