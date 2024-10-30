@@ -27,6 +27,13 @@ void tensor_sub(float *output, const float *input1, const float *input2,
 void tensor_sum(float *output, const float *input, const int size);
 void tensor_transpose(float *output, const float *input, int rows, int cols);
 
+void tensor_sin(float *output, const float *input, const int size);
+void tensor_cos(float *output, const float *input, const int size);
+void tensor_tan(float *output, const float *input, const int size);
+void tensor_asin(float *output, const float *input, const int size);
+void tensor_acos(float *output, const float *input, const int size);
+void tensor_atan(float *output, const float *input, const int size);
+
 #ifdef __cplusplus
 }
 #endif

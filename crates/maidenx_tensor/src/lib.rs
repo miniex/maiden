@@ -2,6 +2,7 @@ mod convert;
 mod display;
 mod grad;
 mod ops;
+mod ops_trigonometric;
 mod overloading;
 mod shape;
 
