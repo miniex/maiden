@@ -2,7 +2,7 @@ use crate::Tensor;
 use maidenx_core::error::Result;
 use std::ops::{Add, Div, Mul, Sub};
 
-impl Add for &Tensor {
+impl Add<&Tensor> for &Tensor {
     type Output = Result<Tensor>;
 
     fn add(self, other: &Tensor) -> Self::Output {
@@ -32,7 +32,7 @@ impl Add<&Tensor> for f32 {
     }
 }
 
-impl Div for &Tensor {
+impl Div<&Tensor> for &Tensor {
     type Output = Result<Tensor>;
 
     fn div(self, other: &Tensor) -> Self::Output {
@@ -62,7 +62,7 @@ impl Div<&Tensor> for f32 {
     }
 }
 
-impl Mul for &Tensor {
+impl Mul<&Tensor> for &Tensor {
     type Output = Result<Tensor>;
 
     fn mul(self, other: &Tensor) -> Self::Output {
@@ -92,7 +92,7 @@ impl Mul<&Tensor> for f32 {
     }
 }
 
-impl Sub for &Tensor {
+impl Sub<&Tensor> for &Tensor {
     type Output = Result<Tensor>;
 
     fn sub(self, other: &Tensor) -> Self::Output {
