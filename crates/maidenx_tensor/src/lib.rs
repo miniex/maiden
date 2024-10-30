@@ -108,6 +108,29 @@ impl Tensor {
     pub fn is_empty(&self) -> bool {
         self.shape.iter().any(|&dim| dim == 0)
     }
+
+    pub fn item(&self) -> Result<f32> {
+        let data = self.to_vec()?;
+        if data.is_empty() {
+            return Err(
+                TensorError::InvalidOperation("Cannot call item() on empty tensor".into()).into(),
+            );
+        }
+        Ok(data[0])
+    }
+
+    pub fn item_at(&self, index: usize) -> Result<f32> {
+        let data = self.to_vec()?;
+        if index >= data.len() {
+            return Err(TensorError::IndexError(format!(
+                "Index {} is out of bounds for tensor with {} elements",
+                index,
+                data.len()
+            ))
+            .into());
+        }
+        Ok(data[index])
+    }
 }
 
 #[cfg(test)]
@@ -428,6 +451,30 @@ mod tests {
         match Tensor::cat(&[&tensor1, &tensor3], 0) {
             Err(MaidenXError::TensorError(TensorError::ShapeMismatch(_))) => Ok(()),
             _ => panic!("Expected ShapeMismatch error"),
+        }
+    }
+
+    #[test]
+    fn test_item() -> Result<()> {
+        let tensor = Tensor::new(vec![42.0f32])?;
+        assert_eq!(tensor.item()?, 42.0);
+
+        let tensor = Tensor::new(vec![1.0, 2.0, 3.0])?;
+        assert_eq!(tensor.item()?, 1.0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_item_at() -> Result<()> {
+        let tensor = Tensor::new(vec![1.0, 2.0, 3.0])?;
+        assert_eq!(tensor.item_at(0)?, 1.0);
+        assert_eq!(tensor.item_at(1)?, 2.0);
+        assert_eq!(tensor.item_at(2)?, 3.0);
+
+        match tensor.item_at(3) {
+            Err(MaidenXError::TensorError(TensorError::IndexError(_))) => Ok(()),
+            _ => panic!("Expected IndexError"),
         }
     }
 }
