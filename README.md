@@ -19,8 +19,9 @@
 
 ### Prerequisites
 
-- CUDA Toolkit
-- CMake
+- if you want to use CUDA
+    - CUDA Toolkit
+    - CMake
 
 ### How to use
 
