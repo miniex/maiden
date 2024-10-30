@@ -23,8 +23,8 @@ cuda = ["maidenx_internal/cuda"]
 maidenx_internal = { path = "crates/maidenx_internal", version = "0.0.6-dev" }
 
 [[example]]
-name = "device_benchmark"
-path = "examples/device/device_benchmark.rs"
+name = "device-guard"
+path = "examples/device/device-guard.rs"
 
 [[example]]
 name = "device_cpu"
@@ -33,6 +33,14 @@ path = "examples/device/device_cpu.rs"
 [[example]]
 name = "device_cuda"
 path = "examples/device/device_cuda.rs"
+
+[[example]]
+name = "grad-auto"
+path = "examples/grad/grad-auto.rs"
+
+[[example]]
+name = "grad-nonauto"
+path = "examples/grad/grad-nonauto.rs"
 
 [[example]]
 name = "tensor_basic"

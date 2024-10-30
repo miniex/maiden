@@ -14,5 +14,6 @@ cuda = ["maidenx_core/cuda", "maidenx_nn/cuda", "maidenx_tensor/cuda"]
 
 [dependencies]
 maidenx_core = { path = "../maidenx_core", version = "0.0.6-dev" }
+maidenx_math = { path = "../maidenx_math", version = "0.0.6-dev" }
 maidenx_nn = { path = "../maidenx_nn", version = "0.0.6-dev" }
 maidenx_tensor = { path = "../maidenx_tensor", version = "0.0.6-dev" }

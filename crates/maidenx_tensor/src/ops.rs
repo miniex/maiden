@@ -9,6 +9,7 @@ use maidenx_cuda_kernels::tensor_ops::{
     cuda_tensor_add, cuda_tensor_div, cuda_tensor_mat_mul, cuda_tensor_mean, cuda_tensor_mul,
     cuda_tensor_pow, cuda_tensor_scalar_mul, cuda_tensor_sum, cuda_tensor_transpose,
 };
+use std::cell::RefCell;
 
 impl Tensor {
     pub fn add(&self, other: &Tensor) -> Result<Tensor> {
@@ -25,6 +26,8 @@ impl Tensor {
             buffer: DeviceBuffer::new(self.buffer.len(), &device)?,
             shape: self.shape.clone(),
             strides: self.strides.clone(),
+            grad: RefCell::new(None),
+            requires_grad: self.requires_grad || other.requires_grad,
         };
 
         match &device {
@@ -69,6 +72,8 @@ impl Tensor {
             buffer: DeviceBuffer::new(self.buffer.len(), &device)?,
             shape: self.shape.clone(),
             strides: self.strides.clone(),
+            grad: RefCell::new(None),
+            requires_grad: self.requires_grad || other.requires_grad,
         };
 
         match &device {
@@ -128,6 +133,8 @@ impl Tensor {
             buffer: DeviceBuffer::new(result_size, &device)?,
             shape: result_shape,
             strides: result_strides,
+            grad: RefCell::new(None),
+            requires_grad: self.requires_grad || other.requires_grad,
         };
 
         match &device {
@@ -167,6 +174,8 @@ impl Tensor {
             buffer: DeviceBuffer::new(std::mem::size_of::<f32>(), &device)?,
             shape: vec![1],
             strides: vec![1],
+            grad: RefCell::new(None),
+            requires_grad: self.requires_grad,
         };
 
         match &device {
@@ -209,6 +218,8 @@ impl Tensor {
             buffer: DeviceBuffer::new(self.buffer.len(), &device)?,
             shape: self.shape.clone(),
             strides: self.strides.clone(),
+            grad: RefCell::new(None),
+            requires_grad: self.requires_grad || other.requires_grad,
         };
 
         match &device {
@@ -245,6 +256,8 @@ impl Tensor {
             buffer: DeviceBuffer::new(self.buffer.len(), &device)?,
             shape: self.shape.clone(),
             strides: self.strides.clone(),
+            grad: RefCell::new(None),
+            requires_grad: self.requires_grad,
         };
 
         match &device {
@@ -280,6 +293,8 @@ impl Tensor {
             buffer: DeviceBuffer::new(self.buffer.len(), &device)?,
             shape: self.shape.clone(),
             strides: self.strides.clone(),
+            grad: RefCell::new(None),
+            requires_grad: self.requires_grad,
         };
 
         match &device {
@@ -318,6 +333,8 @@ impl Tensor {
             buffer: DeviceBuffer::new(std::mem::size_of::<f32>(), &device)?,
             shape: vec![1],
             strides: vec![1],
+            grad: RefCell::new(None),
+            requires_grad: self.requires_grad,
         };
 
         match &device {
@@ -358,6 +375,8 @@ impl Tensor {
             buffer: DeviceBuffer::new(self.buffer.len(), &device)?,
             shape: vec![cols, rows],
             strides: vec![rows, 1],
+            grad: RefCell::new(None),
+            requires_grad: self.requires_grad,
         };
 
         match &device {

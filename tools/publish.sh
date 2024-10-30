@@ -7,6 +7,8 @@ crates=(
 
     maidenx_core
     maidenx_cuda_kernels
+
+    maidenx_math
     
     maidenx_tensor
     

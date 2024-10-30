@@ -1,0 +1,13 @@
+[package]
+name = "maidenx_math"
+version = "0.0.6-dev"
+description = "MaidenX Math"
+license = "MIT OR Apache-2.0"
+authors = ["Han Damin <miniex@daminstudio.net>"]
+edition = "2021"
+publish = true
+repository = "https://github.com/miniex/maidenx"
+
+[features]
+
+[dependencies]

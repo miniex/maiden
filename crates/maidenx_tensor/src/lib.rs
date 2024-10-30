@@ -1,7 +1,10 @@
 mod convert;
 mod display;
+mod grad;
 mod ops;
 mod shape;
+
+use std::cell::RefCell;
 
 use convert::TensorData;
 use maidenx_core::buffer::DeviceBuffer;
@@ -14,6 +17,8 @@ pub struct Tensor {
     buffer: DeviceBuffer,
     shape: Vec<usize>,
     strides: Vec<usize>,
+    grad: RefCell<Option<Box<Tensor>>>,
+    requires_grad: bool,
 }
 
 impl Tensor {
@@ -35,6 +40,8 @@ impl Tensor {
             buffer,
             shape,
             strides,
+            grad: RefCell::new(None),
+            requires_grad: false,
         })
     }
 
@@ -60,6 +67,8 @@ impl Tensor {
             buffer,
             shape: shape.to_vec(),
             strides: Self::compute_strides(shape),
+            grad: RefCell::new(None),
+            requires_grad: false,
         })
     }
 
@@ -69,12 +78,32 @@ impl Tensor {
         Self::from_vec(data, shape)
     }
 
+    pub fn ones(shape: &[usize]) -> Result<Self> {
+        let size = shape.iter().product::<usize>();
+        let data = vec![1.0f32; size];
+        Self::from_vec(data, shape)
+    }
+
     pub fn randn(shape: &[usize]) -> Result<Self> {
         let size = shape.iter().product::<usize>();
         let mut rng = rand::thread_rng();
         let normal = Normal::new(0.0, 1.0).map_err(|e| TensorError::DataError(e.to_string()))?;
         let data: Vec<f32> = (0..size).map(|_| normal.sample(&mut rng) as f32).collect();
         Self::from_vec(data, shape)
+    }
+
+    pub fn linspace(start: f32, end: f32, steps: usize) -> Result<Self> {
+        if steps == 0 {
+            return Err(TensorError::InvalidOperation(
+                "Number of steps must be greater than zero".to_string(),
+            )
+            .into());
+        }
+
+        let step_size = (end - start) / (steps as f32 - 1.0);
+        let data: Vec<f32> = (0..steps).map(|i| start + i as f32 * step_size).collect();
+
+        Self::from_vec(data, &[steps])
     }
 
     pub fn data(&self) -> &DeviceBuffer {
