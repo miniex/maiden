@@ -27,12 +27,12 @@ name = "device-guard"
 path = "examples/device/device-guard.rs"
 
 [[example]]
-name = "device_cpu"
-path = "examples/device/device_cpu.rs"
+name = "device-cpu"
+path = "examples/device/device-cpu.rs"
 
 [[example]]
-name = "device_cuda"
-path = "examples/device/device_cuda.rs"
+name = "device-cuda"
+path = "examples/device/device-cuda.rs"
 
 [[example]]
 name = "grad-auto"
@@ -43,17 +43,17 @@ name = "grad-nonauto"
 path = "examples/grad/grad-nonauto.rs"
 
 [[example]]
-name = "tensor_basic"
-path = "examples/tensor/tensor_basic.rs"
+name = "tensor-basic"
+path = "examples/tensor/tensor-basic.rs"
 
 [[example]]
-name = "tensor_mat_mul"
-path = "examples/tensor/tensor_mat_mul.rs"
+name = "tensor-mat_mul"
+path = "examples/tensor/tensor-mat_mul.rs"
 
 [[example]]
-name = "module_builder"
-path = "examples/nn/module_builder.rs"
+name = "module-builder"
+path = "examples/nn/module-builder.rs"
 
 [[example]]
-name = "nn_linear"
-path = "examples/nn/nn_linear.rs"
+name = "nn-linear"
+path = "examples/nn/nn-linear.rs"
