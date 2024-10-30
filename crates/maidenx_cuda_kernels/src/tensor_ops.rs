@@ -3,7 +3,7 @@ use maidenx_cuda_core::prelude::CudaResult;
 #[link(name = "tensor_ops")]
 extern "C" {
     fn tensor_add(output: *mut f32, input1: *const f32, input2: *const f32, size: usize);
-    fn tensor_mul(output: *mut f32, input1: *const f32, input2: *const f32, size: usize);
+    fn tensor_div(output: *mut f32, input1: *const f32, input2: *const f32, size: usize);
     fn tensor_mat_mul(
         output: *mut f32,
         input1: *const f32,
@@ -12,6 +12,7 @@ extern "C" {
         n: i32,
         k: i32,
     );
+    fn tensor_mul(output: *mut f32, input1: *const f32, input2: *const f32, size: usize);
     fn tensor_scalar_mul(output: *mut f32, input: *const f32, scalar: f32, size: usize);
 }
 
@@ -43,7 +44,7 @@ pub unsafe fn cuda_tensor_add(
     Ok(())
 }
 
-/// Performs element-wise multiplication of two tensors on CUDA device.
+/// Performs element-wise division of two tensors on CUDA device.
 ///
 /// # Arguments
 ///
@@ -60,13 +61,13 @@ pub unsafe fn cuda_tensor_add(
 /// * `input1` and `input2` buffers contain at least `size` elements
 /// * Memory regions do not overlap
 /// * All memory is properly aligned for f32
-pub unsafe fn cuda_tensor_mul(
+pub unsafe fn cuda_tensor_div(
     output: *mut f32,
     input1: *const f32,
     input2: *const f32,
     size: usize,
 ) -> CudaResult<()> {
-    tensor_mul(output, input1, input2, size);
+    tensor_div(output, input1, input2, size);
     // TODO add CUDA Error check
     Ok(())
 }
@@ -100,6 +101,34 @@ pub unsafe fn cuda_tensor_mat_mul(
     k: i32,
 ) -> CudaResult<()> {
     tensor_mat_mul(output, input1, input2, m, n, k);
+    // TODO add CUDA Error check
+    Ok(())
+}
+
+/// Performs element-wise multiplication of two tensors on CUDA device.
+///
+/// # Arguments
+///
+/// * `output` - Pointer to the output buffer on CUDA device
+/// * `input1` - Pointer to the first input buffer on CUDA device
+/// * `input2` - Pointer to the second input buffer on CUDA device
+/// * `size` - Number of elements to process
+///
+/// # Safety
+///
+/// Caller must ensure that:
+/// * All pointers point to valid memory on the CUDA device
+/// * `output` buffer has enough space for `size` elements
+/// * `input1` and `input2` buffers contain at least `size` elements
+/// * Memory regions do not overlap
+/// * All memory is properly aligned for f32
+pub unsafe fn cuda_tensor_mul(
+    output: *mut f32,
+    input1: *const f32,
+    input2: *const f32,
+    size: usize,
+) -> CudaResult<()> {
+    tensor_mul(output, input1, input2, size);
     // TODO add CUDA Error check
     Ok(())
 }

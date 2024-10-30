@@ -8,12 +8,12 @@ pub fn add(a: &[f32], b: &[f32]) -> CpuResult<Vec<f32>> {
     Ok(a.iter().zip(b.iter()).map(|(x, y)| x + y).collect())
 }
 
-pub fn mul(a: &[f32], b: &[f32]) -> CpuResult<Vec<f32>> {
+pub fn div(a: &[f32], b: &[f32]) -> CpuResult<Vec<f32>> {
     if a.len() != b.len() {
         return Err(CpuError::InvalidValue);
     }
 
-    Ok(a.iter().zip(b.iter()).map(|(x, y)| x * y).collect())
+    Ok(a.iter().zip(b.iter()).map(|(x, y)| x / y).collect())
 }
 
 pub fn mat_mul(a: &[f32], a_shape: &[usize], b: &[f32], b_shape: &[usize]) -> CpuResult<Vec<f32>> {
@@ -36,6 +36,14 @@ pub fn mat_mul(a: &[f32], a_shape: &[usize], b: &[f32], b_shape: &[usize]) -> Cp
     }
 
     Ok(result)
+}
+
+pub fn mul(a: &[f32], b: &[f32]) -> CpuResult<Vec<f32>> {
+    if a.len() != b.len() {
+        return Err(CpuError::InvalidValue);
+    }
+
+    Ok(a.iter().zip(b.iter()).map(|(x, y)| x * y).collect())
 }
 
 pub fn scalar_mul(a: &[f32], scalar: f32) -> CpuResult<Vec<f32>> {
