@@ -3,7 +3,7 @@ members = ["crates/*"]
 
 [package]
 name = "maidenx"
-version = "0.0.5-dev"
+version = "0.0.5"
 description = "CUDA implementation for Maiden Engine"
 license = "MIT OR Apache-2.0"
 authors = ["Han Damin <miniex@daminstudio.net>"]
@@ -20,7 +20,7 @@ full = ["maidenx_internal/full"]
 cuda = ["maidenx_internal/cuda"]
 
 [dependencies]
-maidenx_internal = { path = "crates/maidenx_internal", version = "0.0.5-dev" }
+maidenx_internal = { path = "crates/maidenx_internal", version = "0.0.5" }
 
 [[example]]
 name = "device_benchmark"

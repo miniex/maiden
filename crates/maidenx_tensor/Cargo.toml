@@ -1,6 +1,6 @@
 [package]
 name = "maidenx_tensor"
-version = "0.0.5-dev"
+version = "0.0.5"
 description = "MaidenX Tensor"
 license = "MIT OR Apache-2.0"
 authors = ["Han Damin <miniex@daminstudio.net>"]
@@ -12,9 +12,9 @@ repository = "https://github.com/miniex/maidenx"
 cuda = ["maidenx_core/cuda", "maidenx_cuda_kernels"]
 
 [dependencies]
-maidenx_core = { path = "../maidenx_core", version = "0.0.5-dev" }
-maidenx_cpu_core = { path = "../maidenx_cpu_core", version = "0.0.5-dev" }
-maidenx_cuda_kernels = { path = "../maidenx_cuda_kernels", version = "0.0.5-dev", optional = true }
+maidenx_core = { path = "../maidenx_core", version = "0.0.5" }
+maidenx_cpu_core = { path = "../maidenx_cpu_core", version = "0.0.5" }
+maidenx_cuda_kernels = { path = "../maidenx_cuda_kernels", version = "0.0.5", optional = true }
 
 rand = { version = "0.8.5" }
 rand_distr = { version = "0.4.3" }

@@ -1,6 +1,6 @@
 [package]
 name = "maidenx_cuda_kernels"
-version = "0.0.5-dev"
+version = "0.0.5"
 description = "MaidenX CUDA Kernels"
 license = "MIT OR Apache-2.0"
 authors = ["Han Damin <miniex@daminstudio.net>"]
@@ -9,7 +9,7 @@ publish = true
 repository = "https://github.com/miniex/maidenx"
 
 [dependencies]
-maidenx_cuda_core = { path = "../maidenx_cuda_core", version = "0.0.5-dev" }
+maidenx_cuda_core = { path = "../maidenx_cuda_core", version = "0.0.5" }
 
 [build-dependencies]
 cmake = "0.1"

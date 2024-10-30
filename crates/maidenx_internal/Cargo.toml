@@ -1,6 +1,6 @@
 [package]
 name = "maidenx_internal"
-version = "0.0.5-dev"
+version = "0.0.5"
 description = "MaidenX Internal"
 license = "MIT OR Apache-2.0"
 authors = ["Han Damin <miniex@daminstudio.net>"]
@@ -13,6 +13,6 @@ full = ["cuda"]
 cuda = ["maidenx_core/cuda", "maidenx_nn/cuda", "maidenx_tensor/cuda"]
 
 [dependencies]
-maidenx_core = { path = "../maidenx_core", version = "0.0.5-dev" }
-maidenx_nn = { path = "../maidenx_nn", version = "0.0.5-dev" }
-maidenx_tensor = { path = "../maidenx_tensor", version = "0.0.5-dev" }
+maidenx_core = { path = "../maidenx_core", version = "0.0.5" }
+maidenx_nn = { path = "../maidenx_nn", version = "0.0.5" }
+maidenx_tensor = { path = "../maidenx_tensor", version = "0.0.5" }
