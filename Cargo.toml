@@ -27,6 +27,14 @@ name = "device_benchmark"
 path = "examples/device/device_benchmark.rs"
 
 [[example]]
+name = "device_cpu"
+path = "examples/device/device_cpu.rs"
+
+[[example]]
+name = "device_cuda"
+path = "examples/device/device_cuda.rs"
+
+[[example]]
 name = "tensor_basic"
 path = "examples/tensor/tensor_basic.rs"
 

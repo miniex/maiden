@@ -39,7 +39,7 @@ maidenx = { version = "0.0.5", features = ["full"] }
 # only cpu
 # maidenx = { version = "0.0.5" }
 # only cuda, but cpu is default
-# maidenx = {version = "0.0.5", features = ["cuda"]}
+# maidenx = { version = "0.0.5", features = ["cuda"] }
 ```
 
 How to use Tensor:
