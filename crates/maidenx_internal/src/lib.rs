@@ -1,5 +1,3 @@
-pub mod cpu;
-pub mod cuda;
 pub mod prelude;
 
 pub use maidenx_core as core;

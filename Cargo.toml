@@ -15,6 +15,10 @@ readme = "README.md"
 keywords = ["cuda", "gpu", "maiden"]
 categories = ["science", "development-tools"]
 
+[features]
+full = ["maidenx_internal/full"]
+cuda = ["maidenx_internal/cuda"]
+
 [dependencies]
 maidenx_internal = { path = "crates/maidenx_internal", version = "0.0.5-dev" }
 

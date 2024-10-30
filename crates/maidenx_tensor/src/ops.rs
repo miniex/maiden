@@ -4,6 +4,7 @@ use maidenx_core::{
     device::Device,
     error::{MaidenXError, Result, TensorError},
 };
+#[cfg(feature = "cuda")]
 use maidenx_cuda_kernels::tensor_ops::{
     cuda_tensor_add, cuda_tensor_mat_mul, cuda_tensor_mul, cuda_tensor_scalar_mul,
 };
@@ -32,15 +33,22 @@ impl Tensor {
                 let result_data = maidenx_cpu_core::ops::tensor_ops::add(&a, &b)?;
                 result.buffer.copy_from_host(&result_data)?;
             }
-            Device::Cuda(_) => unsafe {
-                cuda_tensor_add(
-                    result.buffer.as_mut_ptr(),
-                    self.buffer.as_ptr(),
-                    other.buffer.as_ptr(),
-                    self.size(),
-                )
-                .map_err(MaidenXError::from)?;
-            },
+            Device::Cuda(_) => {
+                #[cfg(feature = "cuda")]
+                unsafe {
+                    cuda_tensor_add(
+                        result.buffer.as_mut_ptr(),
+                        self.buffer.as_ptr(),
+                        other.buffer.as_ptr(),
+                        self.size(),
+                    )
+                    .map_err(MaidenXError::from)?;
+                }
+                #[cfg(not(feature = "cuda"))]
+                return Err(MaidenXError::UnsupportedOperation(
+                    "CUDA operations are not available - feature not enabled".into(),
+                ));
+            }
         }
 
         Ok(result)
@@ -69,15 +77,22 @@ impl Tensor {
                 let result_data = maidenx_cpu_core::ops::tensor_ops::mul(&a, &b)?;
                 result.buffer.copy_from_host(&result_data)?;
             }
-            Device::Cuda(_) => unsafe {
-                cuda_tensor_mul(
-                    result.buffer.as_mut_ptr(),
-                    self.buffer.as_ptr(),
-                    other.buffer.as_ptr(),
-                    self.size(),
-                )
-                .map_err(MaidenXError::from)?;
-            },
+            Device::Cuda(_) => {
+                #[cfg(feature = "cuda")]
+                unsafe {
+                    cuda_tensor_mul(
+                        result.buffer.as_mut_ptr(),
+                        self.buffer.as_ptr(),
+                        other.buffer.as_ptr(),
+                        self.size(),
+                    )
+                    .map_err(MaidenXError::from)?;
+                }
+                #[cfg(not(feature = "cuda"))]
+                return Err(MaidenXError::UnsupportedOperation(
+                    "CUDA operations are not available - feature not enabled".into(),
+                ));
+            }
         }
 
         Ok(result)
@@ -122,17 +137,24 @@ impl Tensor {
                     maidenx_cpu_core::ops::tensor_ops::mat_mul(&a, &self.shape, &b, &other.shape)?;
                 result.buffer.copy_from_host(&result_data)?;
             }
-            Device::Cuda(_) => unsafe {
-                cuda_tensor_mat_mul(
-                    result.buffer.as_mut_ptr(),
-                    self.buffer.as_ptr(),
-                    other.buffer.as_ptr(),
-                    m as i32,
-                    n as i32,
-                    k as i32,
-                )
-                .map_err(MaidenXError::from)?;
-            },
+            Device::Cuda(_) => {
+                #[cfg(feature = "cuda")]
+                unsafe {
+                    cuda_tensor_mat_mul(
+                        result.buffer.as_mut_ptr(),
+                        self.buffer.as_ptr(),
+                        other.buffer.as_ptr(),
+                        m as i32,
+                        n as i32,
+                        k as i32,
+                    )
+                    .map_err(MaidenXError::from)?;
+                }
+                #[cfg(not(feature = "cuda"))]
+                return Err(MaidenXError::UnsupportedOperation(
+                    "CUDA operations are not available - feature not enabled".into(),
+                ));
+            }
         }
 
         Ok(result)
@@ -155,15 +177,22 @@ impl Tensor {
                     .collect::<Vec<f32>>();
                 result.buffer.copy_from_host(&data)?;
             }
-            Device::Cuda(_) => unsafe {
-                cuda_tensor_scalar_mul(
-                    result.buffer.as_mut_ptr(),
-                    self.buffer.as_ptr(),
-                    scalar,
-                    self.size(),
-                )
-                .map_err(MaidenXError::from)?;
-            },
+            Device::Cuda(_) => {
+                #[cfg(feature = "cuda")]
+                unsafe {
+                    cuda_tensor_scalar_mul(
+                        result.buffer.as_mut_ptr(),
+                        self.buffer.as_ptr(),
+                        scalar,
+                        self.size(),
+                    )
+                    .map_err(MaidenXError::from)?;
+                }
+                #[cfg(not(feature = "cuda"))]
+                return Err(MaidenXError::UnsupportedOperation(
+                    "CUDA operations are not available - feature not enabled".into(),
+                ));
+            }
         }
 
         Ok(result)

@@ -3,6 +3,7 @@ use crate::{
     error::{MaidenXError, Result},
 };
 use maidenx_cpu_core::buffer::CpuBuffer;
+#[cfg(feature = "cuda")]
 use maidenx_cuda_core::buffer::CudaBuffer;
 use std::sync::Arc;
 
@@ -20,7 +21,10 @@ pub trait Buffer: Send + Sync {
 #[derive(Debug, Clone)]
 pub enum DeviceBuffer {
     Cpu(Arc<CpuBuffer>),
+    #[cfg(feature = "cuda")]
     Cuda(Arc<CudaBuffer>),
+    #[cfg(not(feature = "cuda"))]
+    Cuda(Arc<Vec<f32>>),
 }
 
 impl DeviceBuffer {
@@ -33,8 +37,16 @@ impl DeviceBuffer {
                 Ok(DeviceBuffer::Cpu(Arc::new(buffer)))
             }
             Device::Cuda(_) => {
-                let buffer = CudaBuffer::new(size).map_err(MaidenXError::from)?;
-                Ok(DeviceBuffer::Cuda(Arc::new(buffer)))
+                #[cfg(feature = "cuda")]
+                {
+                    let buffer = CudaBuffer::new(size).map_err(MaidenXError::from)?;
+                    Ok(DeviceBuffer::Cuda(Arc::new(buffer)))
+                }
+                #[cfg(not(feature = "cuda"))]
+                {
+                    log::warn!("CUDA support not enabled, using CPU fallback");
+                    Ok(DeviceBuffer::Cuda(Arc::new(vec![0.0; size])))
+                }
             }
         }
     }
@@ -59,12 +71,27 @@ impl DeviceBuffer {
                     Ok(())
                 }
             }
+            #[cfg(feature = "cuda")]
             DeviceBuffer::Cuda(buf) => {
                 if let Some(buf) = Arc::get_mut(buf) {
                     buf.copy_from_host(data).map_err(MaidenXError::from)
                 } else {
                     let mut new_buf = (**buf).clone();
                     new_buf.copy_from_host(data).map_err(MaidenXError::from)?;
+                    *self = DeviceBuffer::Cuda(Arc::new(new_buf));
+                    Ok(())
+                }
+            }
+            #[cfg(not(feature = "cuda"))]
+            DeviceBuffer::Cuda(buf) => {
+                if let Some(buf) = Arc::get_mut(buf) {
+                    buf.clear();
+                    buf.extend_from_slice(data);
+                    Ok(())
+                } else {
+                    let mut new_buf = (**buf).clone();
+                    new_buf.clear();
+                    new_buf.extend_from_slice(data);
                     *self = DeviceBuffer::Cuda(Arc::new(new_buf));
                     Ok(())
                 }
@@ -77,7 +104,25 @@ impl DeviceBuffer {
             DeviceBuffer::Cpu(buf) => buf.copy_to_host(data).map_err(|e| {
                 MaidenXError::TensorError(crate::error::TensorError::DataError(e.to_string()))
             }),
+            #[cfg(feature = "cuda")]
             DeviceBuffer::Cuda(buf) => buf.copy_to_host(data).map_err(MaidenXError::from),
+            #[cfg(not(feature = "cuda"))]
+            DeviceBuffer::Cuda(buf) => {
+                if data.len() != buf.len() {
+                    return Err(MaidenXError::BufferSizeMismatch(
+                        "Host buffer size does not match device buffer size".into(),
+                    ));
+                }
+                data.copy_from_slice(buf);
+                Ok(())
+            }
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        match self {
+            DeviceBuffer::Cpu(buf) => buf.is_empty(),
+            DeviceBuffer::Cuda(buf) => buf.is_empty(),
         }
     }
 
@@ -86,10 +131,6 @@ impl DeviceBuffer {
             DeviceBuffer::Cpu(buf) => buf.len(),
             DeviceBuffer::Cuda(buf) => buf.len(),
         }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
     }
 
     pub fn as_ptr(&self) -> *const f32 {
@@ -140,6 +181,10 @@ impl Buffer for DeviceBuffer {
 
     fn copy_to_host(&self, data: &mut [f32]) -> Result<()> {
         self.copy_to_host(data)
+    }
+
+    fn is_empty(&self) -> bool {
+        self.is_empty()
     }
 
     fn len(&self) -> usize {

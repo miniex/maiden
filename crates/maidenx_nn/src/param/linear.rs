@@ -3,6 +3,7 @@ use maidenx_core::{
     device::Device,
     error::{MaidenXError, Result},
 };
+#[cfg(feature = "cuda")]
 use maidenx_cuda_kernels::nn_ops::{cuda_bilinear_forward, cuda_linear_forward};
 use maidenx_tensor::Tensor;
 
@@ -62,20 +63,29 @@ impl Linear {
                 Tensor::from_vec(result, &[batch_size, self.out_features])
             }
             Device::Cuda(_) => {
-                let mut output = Tensor::zeros(&[batch_size, self.out_features])?;
-                unsafe {
-                    cuda_linear_forward(
-                        output.data_mut().as_mut_ptr(),
-                        input.data().as_ptr(),
-                        self.weight.data().as_ptr(),
-                        self.bias.as_ref().map(|b| b.data().as_ptr()),
-                        batch_size as i32,
-                        self.out_features as i32,
-                        self.in_features as i32,
-                    )
-                    .map_err(MaidenXError::from)?;
+                #[cfg(feature = "cuda")]
+                {
+                    let mut output = Tensor::zeros(&[batch_size, self.out_features])?;
+                    unsafe {
+                        cuda_linear_forward(
+                            output.data_mut().as_mut_ptr(),
+                            input.data().as_ptr(),
+                            self.weight.data().as_ptr(),
+                            self.bias.as_ref().map(|b| b.data().as_ptr()),
+                            batch_size as i32,
+                            self.out_features as i32,
+                            self.in_features as i32,
+                        )
+                        .map_err(MaidenXError::from)?;
+                    }
+                    Ok(output)
                 }
-                Ok(output)
+                #[cfg(not(feature = "cuda"))]
+                {
+                    Err(MaidenXError::UnsupportedOperation(
+                        "CUDA operations are not available - feature not enabled".into(),
+                    ))
+                }
             }
         }
     }
@@ -196,22 +206,31 @@ impl Bilinear {
                 Tensor::from_vec(result, &[batch_size, self.out_features])
             }
             Device::Cuda(_) => {
-                let mut output = Tensor::zeros(&[batch_size, self.out_features])?;
-                unsafe {
-                    cuda_bilinear_forward(
-                        output.data_mut().as_mut_ptr(),
-                        input1.data().as_ptr(),
-                        input2.data().as_ptr(),
-                        self.weight.data().as_ptr(),
-                        self.bias.as_ref().map(|b| b.data().as_ptr()),
-                        batch_size as i32,
-                        self.out_features as i32,
-                        self.in1_features as i32,
-                        self.in2_features as i32,
-                    )
-                    .map_err(MaidenXError::from)?;
+                #[cfg(feature = "cuda")]
+                {
+                    let mut output = Tensor::zeros(&[batch_size, self.out_features])?;
+                    unsafe {
+                        cuda_bilinear_forward(
+                            output.data_mut().as_mut_ptr(),
+                            input1.data().as_ptr(),
+                            input2.data().as_ptr(),
+                            self.weight.data().as_ptr(),
+                            self.bias.as_ref().map(|b| b.data().as_ptr()),
+                            batch_size as i32,
+                            self.out_features as i32,
+                            self.in1_features as i32,
+                            self.in2_features as i32,
+                        )
+                        .map_err(MaidenXError::from)?;
+                    }
+                    Ok(output)
                 }
-                Ok(output)
+                #[cfg(not(feature = "cuda"))]
+                {
+                    Err(MaidenXError::UnsupportedOperation(
+                        "CUDA operations are not available - feature not enabled".into(),
+                    ))
+                }
             }
         }
     }

@@ -8,10 +8,11 @@ edition = "2021"
 publish = true
 repository = "https://github.com/miniex/maidenx"
 
+[features]
+full = ["cuda"]
+cuda = ["maidenx_core/cuda", "maidenx_nn/cuda", "maidenx_tensor/cuda"]
+
 [dependencies]
 maidenx_core = { path = "../maidenx_core", version = "0.0.5-dev" }
-maidenx_cpu_core = { path = "../maidenx_cpu_core", version = "0.0.5-dev" }
-maidenx_cuda_core = { path = "../maidenx_cuda_core", version = "0.0.5-dev" }
-maidenx_cuda_kernels = { path = "../maidenx_cuda_kernels", version = "0.0.5-dev" }
 maidenx_nn = { path = "../maidenx_nn", version = "0.0.5-dev" }
 maidenx_tensor = { path = "../maidenx_tensor", version = "0.0.5-dev" }

@@ -32,6 +32,15 @@
 
 ### Example
 
+```toml
+[dependencies]
+maidenx = { version = "0.0.5-dev", features = ["full"] }
+# only cpu
+# maidenx = { version = "0.0.5-dev" }
+# only cuda, but cpu is default
+# maidenx = {version = "0.0.5-dev", features = ["cuda"]}
+```
+
 How to use Tensor:
 
 ```rust

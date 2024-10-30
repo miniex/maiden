@@ -1,5 +1,4 @@
 use crate::error::{CudaError, CudaResult};
-use maidenx_cuda_sys as sys;
 use std::{fmt, mem, ptr::NonNull};
 
 #[derive(Clone)]
@@ -20,7 +19,7 @@ impl fmt::Debug for CudaBuffer {
 impl CudaBuffer {
     pub fn new(size: usize) -> CudaResult<Self> {
         let mut ptr = std::ptr::null_mut();
-        let result = unsafe { sys::cudaMalloc(&mut ptr, size) };
+        let result = unsafe { super::cudaMalloc(&mut ptr, size) };
         if result != 0 {
             return Err(CudaError::AllocationFailed);
         }
@@ -35,11 +34,11 @@ impl CudaBuffer {
             return Err(CudaError::InvalidValue);
         }
         let result = unsafe {
-            sys::cudaMemcpy(
+            super::cudaMemcpy(
                 self.ptr.as_ptr() as *mut std::ffi::c_void,
                 data.as_ptr() as *const std::ffi::c_void,
                 mem::size_of_val(data),
-                sys::cudaMemcpyKind::cudaMemcpyHostToDevice,
+                super::cudaMemcpyKind::cudaMemcpyHostToDevice,
             )
         };
         if result != 0 {
@@ -53,11 +52,11 @@ impl CudaBuffer {
             return Err(CudaError::InvalidValue);
         }
         let result = unsafe {
-            sys::cudaMemcpy(
+            super::cudaMemcpy(
                 data.as_mut_ptr() as *mut std::ffi::c_void,
                 self.ptr.as_ptr() as *const std::ffi::c_void,
                 mem::size_of_val(data),
-                sys::cudaMemcpyKind::cudaMemcpyDeviceToHost,
+                super::cudaMemcpyKind::cudaMemcpyDeviceToHost,
             )
         };
         if result != 0 {
@@ -86,7 +85,7 @@ impl CudaBuffer {
 impl Drop for CudaBuffer {
     fn drop(&mut self) {
         unsafe {
-            let result = sys::cudaFree(self.ptr.as_ptr() as *mut std::ffi::c_void);
+            let result = super::cudaFree(self.ptr.as_ptr() as *mut std::ffi::c_void);
             if result != 0 {
                 eprintln!("Warning: cudaFree failed for CudaBuffer during drop");
             }
@@ -96,4 +95,3 @@ impl Drop for CudaBuffer {
 
 unsafe impl Send for CudaBuffer {}
 unsafe impl Sync for CudaBuffer {}
-

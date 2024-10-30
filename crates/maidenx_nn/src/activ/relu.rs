@@ -3,6 +3,7 @@ use maidenx_core::{
     device::Device,
     error::{MaidenXError, Result},
 };
+#[cfg(feature = "cuda")]
 use maidenx_cuda_kernels::nn_ops::cuda_relu_forward;
 use maidenx_tensor::Tensor;
 
@@ -11,6 +12,7 @@ pub struct ReLU {
     inplace: bool,
 }
 
+#[allow(unused_assignments)]
 impl ReLU {
     pub fn new() -> Self {
         ReLU::default()
@@ -35,18 +37,23 @@ impl ReLU {
                 let result = maidenx_cpu_core::ops::nn_ops::activation::relu_forward(&input_data)?;
                 output = Tensor::from_vec(result, input.shape())?;
             }
-            Device::Cuda(_) => unsafe {
-                cuda_relu_forward(
-                    output.data_mut().as_mut_ptr(),
-                    input.data().as_ptr(),
-                    input.size(),
-                )
-                .map_err(MaidenXError::from)?;
-            },
+            Device::Cuda(_) => {
+                #[cfg(feature = "cuda")]
+                unsafe {
+                    cuda_relu_forward(
+                        output.data_mut().as_mut_ptr(),
+                        input.data().as_ptr(),
+                        input.size(),
+                    )
+                    .map_err(MaidenXError::from)?;
+                }
+                #[cfg(not(feature = "cuda"))]
+                return Err(MaidenXError::UnsupportedOperation(
+                    "CUDA operations are not available - feature not enabled".into(),
+                ));
+            }
         }
-
         output.reshape(input.shape())?;
-
         Ok(output)
     }
 

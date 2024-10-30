@@ -3,6 +3,7 @@ use maidenx_core::{
     device::Device,
     error::{MaidenXError, Result},
 };
+#[cfg(feature = "cuda")]
 use maidenx_cuda_kernels::nn_ops::cuda_sigmoid_forward;
 use maidenx_tensor::Tensor;
 
@@ -11,6 +12,7 @@ pub struct Sigmoid {
     inplace: bool,
 }
 
+#[allow(unused_assignments)]
 impl Sigmoid {
     pub fn new() -> Self {
         Sigmoid::default()
@@ -36,17 +38,23 @@ impl Sigmoid {
                     maidenx_cpu_core::ops::nn_ops::activation::sigmoid_forward(&input_data)?;
                 output = Tensor::from_vec(result, input.shape())?;
             }
-            Device::Cuda(_) => unsafe {
-                cuda_sigmoid_forward(
-                    output.data_mut().as_mut_ptr(),
-                    input.data().as_ptr(),
-                    input.size(),
-                )
-                .map_err(MaidenXError::from)?;
-            },
+            Device::Cuda(_) => {
+                #[cfg(feature = "cuda")]
+                unsafe {
+                    cuda_sigmoid_forward(
+                        output.data_mut().as_mut_ptr(),
+                        input.data().as_ptr(),
+                        input.size(),
+                    )
+                    .map_err(MaidenXError::from)?;
+                }
+                #[cfg(not(feature = "cuda"))]
+                return Err(MaidenXError::UnsupportedOperation(
+                    "CUDA operations are not available - feature not enabled".into(),
+                ));
+            }
         }
         output.reshape(input.shape())?;
-
         Ok(output)
     }
 

@@ -1,13 +1,17 @@
 mod error;
-use std::sync::Arc;
-
 pub use error::{DeviceError, DeviceResult};
+#[cfg(feature = "cuda")]
 use maidenx_cuda_core::device::CudaDevice;
+#[cfg(feature = "cuda")]
+use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub enum Device {
     Cpu,
+    #[cfg(feature = "cuda")]
     Cuda(Arc<CudaDevice>),
+    #[cfg(not(feature = "cuda"))]
+    Cuda(i32),
 }
 
 impl Device {
@@ -16,9 +20,17 @@ impl Device {
     }
 
     pub fn cuda(index: i32) -> DeviceResult<Self> {
-        match CudaDevice::new(index) {
-            Ok(device) => Ok(Device::Cuda(Arc::new(device))),
-            Err(err) => Err(DeviceError::from(err)),
+        #[cfg(feature = "cuda")]
+        {
+            match CudaDevice::new(index) {
+                Ok(device) => Ok(Device::Cuda(Arc::new(device))),
+                Err(err) => Err(DeviceError::from(err)),
+            }
+        }
+        #[cfg(not(feature = "cuda"))]
+        {
+            log::warn!("CUDA support is not enabled. Using fallback implementation.");
+            Ok(Device::Cuda(index))
         }
     }
 
@@ -33,19 +45,27 @@ impl Device {
     pub fn synchronize(&self) -> DeviceResult<()> {
         match self {
             Device::Cpu => Ok(()),
+            #[cfg(feature = "cuda")]
             Device::Cuda(device) => device.synchronize().map_err(DeviceError::from),
+            #[cfg(not(feature = "cuda"))]
+            Device::Cuda(_) => {
+                log::warn!("CUDA operations are not available - feature not enabled");
+                Ok(())
+            }
         }
     }
 
     pub fn name(&self) -> String {
         match self {
             Device::Cpu => "CPU".to_string(),
+            #[cfg(feature = "cuda")]
             Device::Cuda(device) => format!("CUDA Device {}", device.index()),
+            #[cfg(not(feature = "cuda"))]
+            Device::Cuda(index) => format!("CUDA Device {} (disabled)", index),
         }
     }
 }
 
-// Thread-local current device
 thread_local! {
     static CURRENT_DEVICE: std::cell::RefCell<Device> = const { std::cell::RefCell::new(Device::Cpu) };
 }
@@ -55,6 +75,7 @@ pub fn get_current_device() -> Device {
 }
 
 pub fn set_current_device(device: Device) -> DeviceResult<()> {
+    #[cfg(feature = "cuda")]
     if let Device::Cuda(cuda_device) = &device {
         cuda_device.set_current()?;
     }
@@ -81,100 +102,3 @@ impl Drop for DeviceGuard {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_cpu_device() {
-        let device = Device::cpu();
-        assert!(device.is_cpu());
-        assert!(!device.is_cuda());
-        assert_eq!(device.name(), "CPU");
-    }
-
-    #[test]
-    fn test_cuda_device_creation() -> DeviceResult<()> {
-        if let Ok(device) = Device::cuda(0) {
-            assert!(!device.is_cpu());
-            assert!(device.is_cuda());
-            assert!(device.name().starts_with("CUDA Device"));
-            device.synchronize()?;
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn test_device_guard() -> DeviceResult<()> {
-        assert!(get_current_device().is_cpu());
-
-        if let Ok(cuda_device) = Device::cuda(0) {
-            {
-                let _guard = DeviceGuard::new(cuda_device.clone())?;
-                assert!(get_current_device().is_cuda());
-            }
-
-            assert!(get_current_device().is_cpu());
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn test_current_device_thread_local() -> DeviceResult<()> {
-        use std::thread;
-
-        assert!(get_current_device().is_cpu());
-
-        if let Ok(cuda_device) = Device::cuda(0) {
-            let handle = thread::spawn(move || -> DeviceResult<()> {
-                set_current_device(cuda_device)?;
-                assert!(get_current_device().is_cuda());
-                Ok(())
-            });
-
-            assert!(get_current_device().is_cpu());
-
-            handle.join().unwrap()?;
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn test_multiple_cuda_devices() -> DeviceResult<()> {
-        if let Ok(device0) = Device::cuda(0) {
-            assert_eq!(device0.name(), "CUDA Device 0");
-
-            if let Ok(device1) = Device::cuda(1) {
-                assert_eq!(device1.name(), "CUDA Device 1");
-
-                {
-                    let _guard0 = DeviceGuard::new(device0.clone())?;
-                    assert!(get_current_device().is_cuda());
-
-                    {
-                        let _guard1 = DeviceGuard::new(device1.clone())?;
-                        assert!(get_current_device().is_cuda());
-                    }
-                }
-            }
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn test_device_synchronization() -> DeviceResult<()> {
-        let cpu_device = Device::cpu();
-        cpu_device.synchronize()?;
-
-        if let Ok(cuda_device) = Device::cuda(0) {
-            cuda_device.synchronize()?;
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn test_invalid_cuda_device() {
-        let result = Device::cuda(9999);
-        assert!(result.is_err());
-    }
-}

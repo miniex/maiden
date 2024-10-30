@@ -1,33 +1,24 @@
 use crate::device::DeviceError;
 use maidenx_cpu_core::error::CpuError;
+#[cfg(feature = "cuda")]
 use maidenx_cuda_core::error::CudaError;
 use std::fmt;
 
 #[derive(Debug)]
 pub enum MaidenXError {
-    // Shape
     ShapeMismatch(String),
     InvalidShape(String),
-
-    // Operation
     InvalidOperation(String),
     InvalidArgument(String),
     InvalidSize(String),
-
-    // Memory
     OutOfMemory(String),
     BufferSizeMismatch(String),
-
-    // Device
     Device(DeviceError),
-
-    // Tensor
+    UnsupportedDevice(String),
+    UnsupportedOperation(String),
     TensorError(TensorError),
-
-    // CUDA
+    #[cfg(feature = "cuda")]
     Cuda(CudaError),
-
-    // etc
     IoError(std::io::Error),
     Other(String),
 }
@@ -44,8 +35,8 @@ pub enum TensorError {
     Other(String),
 }
 
-impl std::fmt::Display for TensorError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Display for TensorError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TensorError::ShapeMismatch(msg) => write!(f, "Shape mismatch: {}", msg),
             TensorError::DimensionMismatch(msg) => write!(f, "Dimension mismatch: {}", msg),
@@ -64,18 +55,21 @@ impl std::error::Error for TensorError {}
 impl fmt::Display for MaidenXError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            MaidenXError::ShapeMismatch(msg) => write!(f, "Shape mismatch: {}", msg),
-            MaidenXError::InvalidShape(msg) => write!(f, "Invalid shape: {}", msg),
-            MaidenXError::InvalidOperation(msg) => write!(f, "Invalid operation: {}", msg),
-            MaidenXError::InvalidArgument(msg) => write!(f, "Invalid argument: {}", msg),
-            MaidenXError::InvalidSize(msg) => write!(f, "Invalid size: {}", msg),
-            MaidenXError::OutOfMemory(msg) => write!(f, "Out of memory: {}", msg),
-            MaidenXError::BufferSizeMismatch(msg) => write!(f, "Buffer size mismatch: {}", msg),
-            MaidenXError::Device(err) => write!(f, "Device error: {}", err),
-            MaidenXError::TensorError(err) => write!(f, "Tensor error: {}", err),
-            MaidenXError::Cuda(err) => write!(f, "CUDA error: {}", err),
-            MaidenXError::IoError(err) => write!(f, "IO error: {}", err),
-            MaidenXError::Other(msg) => write!(f, "Error: {}", msg),
+            Self::ShapeMismatch(msg) => write!(f, "Shape mismatch: {}", msg),
+            Self::InvalidShape(msg) => write!(f, "Invalid shape: {}", msg),
+            Self::InvalidOperation(msg) => write!(f, "Invalid operation: {}", msg),
+            Self::InvalidArgument(msg) => write!(f, "Invalid argument: {}", msg),
+            Self::InvalidSize(msg) => write!(f, "Invalid size: {}", msg),
+            Self::OutOfMemory(msg) => write!(f, "Out of memory: {}", msg),
+            Self::BufferSizeMismatch(msg) => write!(f, "Buffer size mismatch: {}", msg),
+            Self::Device(err) => write!(f, "Device error: {}", err),
+            Self::UnsupportedDevice(msg) => write!(f, "Unsupported device: {}", msg),
+            Self::UnsupportedOperation(msg) => write!(f, "Unsupported operation: {}", msg),
+            Self::TensorError(err) => write!(f, "Tensor error: {}", err),
+            #[cfg(feature = "cuda")]
+            Self::Cuda(err) => write!(f, "CUDA error: {}", err),
+            Self::IoError(err) => write!(f, "IO error: {}", err),
+            Self::Other(msg) => write!(f, "Error: {}", msg),
         }
     }
 }
@@ -83,6 +77,7 @@ impl fmt::Display for MaidenXError {
 impl std::error::Error for MaidenXError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
+            #[cfg(feature = "cuda")]
             MaidenXError::Cuda(err) => Some(err),
             MaidenXError::IoError(err) => Some(err),
             _ => None,
@@ -116,6 +111,7 @@ impl From<CpuError> for MaidenXError {
     }
 }
 
+#[cfg(feature = "cuda")]
 impl From<CudaError> for MaidenXError {
     fn from(err: CudaError) -> Self {
         MaidenXError::Cuda(err)

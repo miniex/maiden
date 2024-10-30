@@ -1,25 +1,21 @@
+#[cfg(feature = "cuda")]
 use maidenx_cuda_core::error::CudaError;
 use std::fmt;
 
 #[derive(Debug)]
 pub enum DeviceError {
-    // 디바이스 생성/초기화 관련
     DeviceNotFound(String),
     DeviceInitializationFailed(String),
     UnsupportedDevice(String),
     InvalidDeviceIndex(i32),
-
-    // 디바이스 상태/속성 관련
     DeviceNotAvailable(String),
     DeviceOutOfMemory(String),
     InvalidDeviceProperty(String),
-
-    // 디바이스 연산 관련
     OperationNotSupported(String),
     DeviceSynchronizationFailed,
     StreamError(String),
-
-    // Backend 특화 에러
+    UnsupportedOperation(String),
+    #[cfg(feature = "cuda")]
     Cuda(CudaError),
 }
 
@@ -35,11 +31,11 @@ impl fmt::Display for DeviceError {
             Self::DeviceNotAvailable(msg) => write!(f, "Device not available: {}", msg),
             Self::DeviceOutOfMemory(msg) => write!(f, "Device out of memory: {}", msg),
             Self::InvalidDeviceProperty(msg) => write!(f, "Invalid device property: {}", msg),
-            Self::OperationNotSupported(msg) => {
-                write!(f, "Operation not supported on device: {}", msg)
-            }
+            Self::OperationNotSupported(msg) => write!(f, "Operation not supported: {}", msg),
             Self::DeviceSynchronizationFailed => write!(f, "Device synchronization failed"),
             Self::StreamError(msg) => write!(f, "Stream error: {}", msg),
+            Self::UnsupportedOperation(msg) => write!(f, "Unsupported operation: {}", msg),
+            #[cfg(feature = "cuda")]
             Self::Cuda(err) => write!(f, "CUDA error: {}", err),
         }
     }
@@ -48,12 +44,14 @@ impl fmt::Display for DeviceError {
 impl std::error::Error for DeviceError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
+            #[cfg(feature = "cuda")]
             Self::Cuda(err) => Some(err),
             _ => None,
         }
     }
 }
 
+#[cfg(feature = "cuda")]
 impl From<CudaError> for DeviceError {
     fn from(err: CudaError) -> Self {
         DeviceError::Cuda(err)

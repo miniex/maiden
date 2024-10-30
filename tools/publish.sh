@@ -1,14 +1,13 @@
 #!/bin/bash
 
 crates=(
-    maidenx_cuda_sys
     maidenx_cpu_core
+    maidenx_cuda_core
     maidenx_macro_utils
 
-    maidenx_cuda_core
+    maidenx_core
     maidenx_cuda_kernels
     
-    maidenx_core
     maidenx_tensor
     
     maidenx_nn/macros

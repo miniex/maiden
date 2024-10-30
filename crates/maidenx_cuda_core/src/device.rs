@@ -1,5 +1,4 @@
 use crate::error::{CudaError, CudaResult};
-use maidenx_cuda_sys as sys;
 use std::ptr::null_mut;
 
 #[derive(Debug, Clone)]
@@ -14,7 +13,7 @@ pub struct CudaDeviceProperties {
 }
 
 #[derive(Debug)]
-pub struct CudaStream(pub(crate) sys::cudaStream_t);
+pub struct CudaStream(pub(crate) super::cudaStream_t);
 
 #[derive(Debug)]
 pub struct CudaDevice {
@@ -31,7 +30,7 @@ impl CudaDevice {
         unsafe {
             // Get device count
             let mut count = 0;
-            if sys::cudaGetDeviceCount(&mut count) != 0 {
+            if super::cudaGetDeviceCount(&mut count) != 0 {
                 return Err(CudaError::DeviceNotFound);
             }
 
@@ -40,19 +39,19 @@ impl CudaDevice {
             }
 
             // Set device
-            if sys::cudaSetDevice(index) != 0 {
+            if super::cudaSetDevice(index) != 0 {
                 return Err(CudaError::InvalidValue);
             }
 
             // Get device properties
             let mut prop = std::mem::zeroed();
-            if sys::cudaGetDeviceProperties(&mut prop, index) != 0 {
+            if super::cudaGetDeviceProperties(&mut prop, index) != 0 {
                 return Err(CudaError::InvalidValue);
             }
 
             // Create stream
             let mut stream = null_mut();
-            if sys::cudaStreamCreate(&mut stream) != 0 {
+            if super::cudaStreamCreate(&mut stream) != 0 {
                 return Err(CudaError::InvalidOperation(
                     "Failed to create stream".into(),
                 ));
@@ -88,7 +87,7 @@ impl CudaDevice {
 
     pub fn synchronize(&self) -> CudaResult<()> {
         unsafe {
-            if sys::cudaDeviceSynchronize() != 0 {
+            if super::cudaDeviceSynchronize() != 0 {
                 return Err(CudaError::InvalidOperation("Synchronization failed".into()));
             }
             Ok(())
@@ -97,7 +96,7 @@ impl CudaDevice {
 
     pub fn set_current(&self) -> CudaResult<()> {
         unsafe {
-            if sys::cudaSetDevice(self.index) != 0 {
+            if super::cudaSetDevice(self.index) != 0 {
                 return Err(CudaError::InvalidOperation(
                     "Failed to set current device".into(),
                 ));
@@ -114,7 +113,7 @@ impl CudaDevice {
 impl Drop for CudaStream {
     fn drop(&mut self) {
         unsafe {
-            let _ = sys::cudaStreamDestroy(self.0);
+            let _ = super::cudaStreamDestroy(self.0);
         }
     }
 }
