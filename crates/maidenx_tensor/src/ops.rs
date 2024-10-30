@@ -7,7 +7,7 @@ use maidenx_core::{
 #[cfg(feature = "cuda")]
 use maidenx_cuda_kernels::tensor_ops::{
     cuda_tensor_add, cuda_tensor_div, cuda_tensor_mat_mul, cuda_tensor_mean, cuda_tensor_mul,
-    cuda_tensor_pow, cuda_tensor_scalar_mul, cuda_tensor_sum,
+    cuda_tensor_pow, cuda_tensor_scalar_mul, cuda_tensor_sum, cuda_tensor_transpose,
 };
 
 impl Tensor {
@@ -343,6 +343,46 @@ impl Tensor {
             }
         }
 
+        Ok(result)
+    }
+
+    pub fn transpose(&self, rows: usize, cols: usize) -> Result<Tensor> {
+        if self.size() != rows * cols {
+            return Err(MaidenXError::InvalidArgument(
+                "Invalid dimensions for transpose".into(),
+            ));
+        }
+
+        let device = maidenx_core::device::get_current_device();
+        let mut result = Self {
+            buffer: DeviceBuffer::new(self.buffer.len(), &device)?,
+            shape: vec![cols, rows],
+            strides: vec![rows, 1],
+        };
+
+        match &device {
+            Device::Cpu => {
+                let data = self.to_vec()?;
+                let result_data = maidenx_cpu_core::ops::tensor_ops::transpose(&data, rows, cols)?;
+                result.buffer.copy_from_host(&result_data)?;
+            }
+            Device::Cuda(_) => {
+                #[cfg(feature = "cuda")]
+                unsafe {
+                    cuda_tensor_transpose(
+                        result.buffer.as_mut_ptr(),
+                        self.buffer.as_ptr(),
+                        rows,
+                        cols,
+                    )
+                    .map_err(MaidenXError::from)?;
+                }
+                #[cfg(not(feature = "cuda"))]
+                return Err(MaidenXError::UnsupportedOperation(
+                    "CUDA operations are not available - feature not enabled".into(),
+                ));
+            }
+        }
         Ok(result)
     }
 }

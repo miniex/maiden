@@ -319,6 +319,36 @@ mod tests {
     }
 
     #[test]
+    fn test_transpose() -> Result<()> {
+        let tensor = Tensor::new(vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]])?;
+        let result = tensor.transpose(2, 3)?;
+
+        assert_eq!(result.shape(), &[3, 2]);
+        assert_eq!(result.to_vec()?, vec![1.0, 4.0, 2.0, 5.0, 3.0, 6.0]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_transpose_invalid_shape() -> Result<()> {
+        let tensor = Tensor::new(vec![vec![1.0, 2.0], vec![3.0, 4.0]])?;
+
+        match tensor.transpose(3, 3) {
+            Err(MaidenXError::InvalidArgument(_)) => Ok(()),
+            _ => panic!("Expected InvalidArgument error for incorrect dimensions"),
+        }
+    }
+
+    #[test]
+    fn test_transpose_square() -> Result<()> {
+        let tensor = Tensor::new(vec![vec![1.0, 2.0], vec![3.0, 4.0]])?;
+        let result = tensor.transpose(2, 2)?;
+
+        assert_eq!(result.shape(), &[2, 2]);
+        assert_eq!(result.to_vec()?, vec![1.0, 3.0, 2.0, 4.0]);
+        Ok(())
+    }
+
+    #[test]
     fn test_from_vec() -> Result<()> {
         let tensor = Tensor::from_vec(vec![1.0, 2.0, 3.0], &[3])?;
         assert_eq!(tensor.shape(), &[3]);

@@ -17,6 +17,7 @@ void tensor_pow(float *output, const float *input, float exponent, size_t size);
 void tensor_scalar_mul(float *output, const float *input, const float scalar,
                        const int size);
 void tensor_sum(float *output, const float *input, const int size);
+void tensor_transpose(float *output, const float *input, int rows, int cols);
 
 #ifdef __cplusplus
 }

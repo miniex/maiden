@@ -68,3 +68,17 @@ pub fn sum(a: &[f32]) -> CpuResult<Vec<f32>> {
     }
     Ok(vec![a.iter().sum()])
 }
+
+pub fn transpose(input: &[f32], rows: usize, cols: usize) -> CpuResult<Vec<f32>> {
+    if input.len() != rows * cols {
+        return Err(CpuError::InvalidValue);
+    }
+
+    let mut output = vec![0.0; rows * cols];
+    for i in 0..rows {
+        for j in 0..cols {
+            output[j * rows + i] = input[i * cols + j];
+        }
+    }
+    Ok(output)
+}

@@ -17,6 +17,7 @@ extern "C" {
     fn tensor_pow(output: *mut f32, input: *const f32, exponent: f32, size: usize);
     fn tensor_scalar_mul(output: *mut f32, input: *const f32, scalar: f32, size: usize);
     fn tensor_sum(output: *mut f32, input: *const f32, size: usize);
+    fn tensor_transpose(output: *mut f32, input: *const f32, rows: usize, cols: usize);
 }
 
 /// Performs element-wise addition of two tensors on CUDA device.
@@ -225,6 +226,33 @@ pub unsafe fn cuda_tensor_scalar_mul(
 /// * All memory is properly aligned for f32
 pub unsafe fn cuda_tensor_sum(output: *mut f32, input: *const f32, size: usize) -> CudaResult<()> {
     tensor_sum(output, input, size);
+    Ok(())
+}
+
+/// Computes the transpose of a tensor on CUDA device.
+///
+/// # Arguments
+///
+/// * `output` - Pointer to the output buffer on CUDA device
+/// * `input` - Pointer to the input buffer on CUDA device
+/// * `rows` - Number of rows in the input tensor
+/// * `cols` - Number of columns in the input tensor
+///
+/// # Safety
+///
+/// Caller must ensure that:
+/// * All pointers point to valid memory on the CUDA device
+/// * `output` buffer has space for rows * cols elements
+/// * `input` buffer contains at least rows * cols elements
+/// * Memory regions do not overlap
+/// * All memory is properly aligned for f32
+pub unsafe fn cuda_tensor_transpose(
+    output: *mut f32,
+    input: *const f32,
+    rows: usize,
+    cols: usize,
+) -> CudaResult<()> {
+    tensor_transpose(output, input, rows, cols);
     Ok(())
 }
 
@@ -536,6 +564,68 @@ mod tests {
             "Sum mismatch: expected {}, got {}",
             size as f32,
             output_data[0]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_tensor_transpose_basic() -> CudaResult<()> {
+        let rows = 2;
+        let cols = 3;
+        let size = rows * cols;
+        let mut output_buf = CudaBuffer::new(size * std::mem::size_of::<f32>())?;
+        let mut input_buf = CudaBuffer::new(size * std::mem::size_of::<f32>())?;
+
+        let input_data = vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0];
+        input_buf.copy_from_host(&input_data)?;
+
+        unsafe {
+            cuda_tensor_transpose(output_buf.as_mut_ptr(), input_buf.as_ptr(), rows, cols)?;
+        }
+
+        let mut output_data = vec![0.0f32; size];
+        output_buf.copy_to_host(&mut output_data)?;
+
+        let expected = [1.0, 4.0, 2.0, 5.0, 3.0, 6.0];
+        for (i, (&got, &exp)) in output_data.iter().zip(expected.iter()).enumerate() {
+            assert!(
+                (got - exp).abs() < 1e-5,
+                "Mismatch at position {}: expected {}, got {}",
+                i,
+                exp,
+                got
+            );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_tensor_transpose_large() -> CudaResult<()> {
+        let rows = 1024;
+        let cols = 1024;
+        let size = rows * cols;
+        let mut output_buf = CudaBuffer::new(size * std::mem::size_of::<f32>())?;
+        let mut input_buf = CudaBuffer::new(size * std::mem::size_of::<f32>())?;
+
+        let input_data: Vec<f32> = (0..size).map(|i| i as f32).collect();
+        input_buf.copy_from_host(&input_data)?;
+
+        unsafe {
+            cuda_tensor_transpose(output_buf.as_mut_ptr(), input_buf.as_ptr(), rows, cols)?;
+        }
+
+        let mut output_data = vec![0.0f32; size];
+        output_buf.copy_to_host(&mut output_data)?;
+
+        assert!(
+            (output_data[rows] - 1.0).abs() < 1e-5,
+            "Transpose error at (0,1)"
+        );
+        assert!(
+            (output_data[2 * rows + 1] - (cols + 2) as f32).abs() < 1e-5,
+            "Transpose error at (1,2)"
         );
 
         Ok(())
