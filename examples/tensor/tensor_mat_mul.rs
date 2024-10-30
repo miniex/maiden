@@ -7,7 +7,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let data2 = vec![vec![5.0, 6.0], vec![7.0, 8.0]];
     let tensor2 = Tensor::new(data2)?;
 
-    let result = tensor1.matmul(&tensor2)?;
+    let result = tensor1.mat_mul(&tensor2)?;
     println!("Result:\n{}", result);
 
     Ok(())

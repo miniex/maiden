@@ -27,8 +27,8 @@ name = "tensor_basic"
 path = "examples/tensor/tensor_basic.rs"
 
 [[example]]
-name = "tensor_matmul"
-path = "examples/tensor/tensor_matmul.rs"
+name = "tensor_mat_mul"
+path = "examples/tensor/tensor_mat_mul.rs"
 
 [[example]]
 name = "module_builder"

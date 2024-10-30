@@ -16,7 +16,7 @@ pub fn mul(a: &[f32], b: &[f32]) -> CpuResult<Vec<f32>> {
     Ok(a.iter().zip(b.iter()).map(|(x, y)| x * y).collect())
 }
 
-pub fn matmul(a: &[f32], a_shape: &[usize], b: &[f32], b_shape: &[usize]) -> CpuResult<Vec<f32>> {
+pub fn mat_mul(a: &[f32], a_shape: &[usize], b: &[f32], b_shape: &[usize]) -> CpuResult<Vec<f32>> {
     if a_shape[1] != b_shape[0] {
         return Err(CpuError::InvalidValue);
     }

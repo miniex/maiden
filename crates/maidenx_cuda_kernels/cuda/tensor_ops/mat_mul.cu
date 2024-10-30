@@ -3,9 +3,9 @@
 
 #define TILE_SIZE 32
 
-__global__ void matmul_kernel(float *output, const float *input1,
-                              const float *input2, const int M, const int N,
-                              const int K) {
+__global__ void mat_mul_kernel(float *output, const float *input1,
+                               const float *input2, const int M, const int N,
+                               const int K) {
   __shared__ float tile_A[TILE_SIZE][TILE_SIZE];
   __shared__ float tile_B[TILE_SIZE][TILE_SIZE];
 
@@ -43,13 +43,13 @@ __global__ void matmul_kernel(float *output, const float *input1,
 }
 
 extern "C" {
-void tensor_matmul(float *output, const float *input1, const float *input2,
-                   const int M, const int N, const int K) {
+void tensor_mat_mul(float *output, const float *input1, const float *input2,
+                    const int M, const int N, const int K) {
   dim3 block_size(TILE_SIZE, TILE_SIZE);
   dim3 num_blocks((N + TILE_SIZE - 1) / TILE_SIZE,
                   (M + TILE_SIZE - 1) / TILE_SIZE);
 
-  matmul_kernel<<<num_blocks, block_size>>>(output, input1, input2, M, N, K);
+  mat_mul_kernel<<<num_blocks, block_size>>>(output, input1, input2, M, N, K);
   cudaDeviceSynchronize();
 }
 }

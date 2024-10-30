@@ -4,7 +4,7 @@ use maidenx_cuda_core::prelude::CudaResult;
 extern "C" {
     fn tensor_add(output: *mut f32, input1: *const f32, input2: *const f32, size: usize);
     fn tensor_mul(output: *mut f32, input1: *const f32, input2: *const f32, size: usize);
-    fn tensor_matmul(
+    fn tensor_mat_mul(
         output: *mut f32,
         input1: *const f32,
         input2: *const f32,
@@ -12,6 +12,7 @@ extern "C" {
         n: i32,
         k: i32,
     );
+    fn tensor_scalar_mul(output: *mut f32, input: *const f32, scalar: f32, size: usize);
 }
 
 /// Performs element-wise addition of two tensors on CUDA device.
@@ -90,7 +91,7 @@ pub unsafe fn cuda_tensor_mul(
 /// * `input2` buffer contains at least `k * n` elements
 /// * Memory regions do not overlap
 /// * All memory is properly aligned for f32
-pub unsafe fn cuda_tensor_matmul(
+pub unsafe fn cuda_tensor_mat_mul(
     output: *mut f32,
     input1: *const f32,
     input2: *const f32,
@@ -98,7 +99,35 @@ pub unsafe fn cuda_tensor_matmul(
     n: i32,
     k: i32,
 ) -> CudaResult<()> {
-    tensor_matmul(output, input1, input2, m, n, k);
+    tensor_mat_mul(output, input1, input2, m, n, k);
+    // TODO add CUDA Error check
+    Ok(())
+}
+
+/// Performs scalar multiplication of a tensor on CUDA device.
+///
+/// # Arguments
+///
+/// * `output` - Pointer to the output buffer on CUDA device
+/// * `input` - Pointer to the input buffer on CUDA device
+/// * `scalar` - The scalar value to multiply with
+/// * `size` - Number of elements to process
+///
+/// # Safety
+///
+/// Caller must ensure that:
+/// * All pointers point to valid memory on the CUDA device
+/// * `output` buffer has enough space for `size` elements
+/// * `input` buffer contains at least `size` elements
+/// * Memory regions do not overlap
+/// * All memory is properly aligned for f32
+pub unsafe fn cuda_tensor_scalar_mul(
+    output: *mut f32,
+    input: *const f32,
+    scalar: f32,
+    size: usize,
+) -> CudaResult<()> {
+    tensor_scalar_mul(output, input, scalar, size);
     // TODO add CUDA Error check
     Ok(())
 }
@@ -185,7 +214,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tensor_matmul() -> CudaResult<()> {
+    fn test_tensor_mat_mul() -> CudaResult<()> {
         let m = 32;
         let n = 32;
         let k = 32;
@@ -201,7 +230,7 @@ mod tests {
         input2_buf.copy_from_host(&input2_data)?;
 
         unsafe {
-            cuda_tensor_matmul(
+            cuda_tensor_mat_mul(
                 output_buf.as_mut_ptr(),
                 input1_buf.as_ptr(),
                 input2_buf.as_ptr(),
@@ -229,7 +258,7 @@ mod tests {
     }
 
     #[test]
-    fn test_tensor_matmul_large() -> CudaResult<()> {
+    fn test_tensor_mat_mul_large() -> CudaResult<()> {
         let m = 1024;
         let n = 1024;
         let k = 1024;
@@ -245,7 +274,7 @@ mod tests {
         input2_buf.copy_from_host(&input2_data)?;
 
         unsafe {
-            cuda_tensor_matmul(
+            cuda_tensor_mat_mul(
                 output_buf.as_mut_ptr(),
                 input1_buf.as_ptr(),
                 input2_buf.as_ptr(),
@@ -262,6 +291,68 @@ mod tests {
         for (i, &val) in output_data.iter().enumerate() {
             assert!(
                 (val - expected_value).abs() < 1e-3,
+                "Mismatch at position {}: expected {}, got {}",
+                i,
+                expected_value,
+                val
+            );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_tensor_scalar_mul() -> CudaResult<()> {
+        let size = 1024;
+        let scalar = 2.5;
+        let mut output_buf = CudaBuffer::new(size * std::mem::size_of::<f32>())?;
+        let mut input_buf = CudaBuffer::new(size * std::mem::size_of::<f32>())?;
+
+        let input_data: Vec<f32> = vec![1.0; size];
+        input_buf.copy_from_host(&input_data)?;
+
+        unsafe {
+            cuda_tensor_scalar_mul(output_buf.as_mut_ptr(), input_buf.as_ptr(), scalar, size)?;
+        }
+
+        let mut output_data = vec![0.0f32; size];
+        output_buf.copy_to_host(&mut output_data)?;
+
+        let expected_value = 1.0 * scalar;
+        for (i, &val) in output_data.iter().enumerate() {
+            assert!(
+                (val - expected_value).abs() < 1e-5,
+                "Mismatch at position {}: expected {}, got {}",
+                i,
+                expected_value,
+                val
+            );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_tensor_scalar_mul_large() -> CudaResult<()> {
+        let size = 1_048_576; // 1M elements
+        let scalar = 0.5;
+        let mut output_buf = CudaBuffer::new(size * std::mem::size_of::<f32>())?;
+        let mut input_buf = CudaBuffer::new(size * std::mem::size_of::<f32>())?;
+
+        let input_data: Vec<f32> = vec![2.0; size];
+        input_buf.copy_from_host(&input_data)?;
+
+        unsafe {
+            cuda_tensor_scalar_mul(output_buf.as_mut_ptr(), input_buf.as_ptr(), scalar, size)?;
+        }
+
+        let mut output_data = vec![0.0f32; size];
+        output_buf.copy_to_host(&mut output_data)?;
+
+        let expected_value = 2.0 * scalar;
+        for (i, &val) in output_data.iter().enumerate() {
+            assert!(
+                (val - expected_value).abs() < 1e-5,
                 "Mismatch at position {}: expected {}, got {}",
                 i,
                 expected_value,

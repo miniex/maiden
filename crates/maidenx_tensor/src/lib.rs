@@ -220,7 +220,7 @@ mod tests {
         let tensor1 = Tensor::new(vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]])?;
         let tensor2 = Tensor::new(vec![vec![7.0, 8.0], vec![9.0, 10.0], vec![11.0, 12.0]])?;
 
-        let result = tensor1.matmul(&tensor2)?;
+        let result = tensor1.mat_mul(&tensor2)?;
         assert_eq!(result.shape(), &[2, 2]);
 
         let result_data = result.to_vec()?;
@@ -248,7 +248,7 @@ mod tests {
         let tensor1 = Tensor::new(vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]])?;
         let tensor2 = Tensor::new(vec![vec![7.0, 8.0], vec![9.0, 10.0]])?;
 
-        match tensor1.matmul(&tensor2) {
+        match tensor1.mat_mul(&tensor2) {
             Err(MaidenXError::TensorError(TensorError::ShapeMismatch(_))) => Ok(()),
             _ => panic!("Expected ShapeMismatch error"),
         }
@@ -340,7 +340,7 @@ mod tests {
     #[test]
     fn test_mul_scalar() -> Result<()> {
         let tensor = Tensor::new(vec![vec![1.0, 2.0], vec![3.0, 4.0]])?;
-        let result = tensor.mul_scalar(2.0)?;
+        let result = tensor.scalar_mul(2.0)?;
 
         assert_eq!(result.shape(), &[2, 2]);
         assert_eq!(result.to_vec()?, vec![2.0, 4.0, 6.0, 8.0]);

@@ -23,7 +23,7 @@ impl Linear {
         let k = 1.0 / (in_features as f32).sqrt();
         let weight = Tensor::randn(&[out_features, in_features])
             .map_err(MaidenXError::from)?
-            .mul_scalar(k)
+            .scalar_mul(k)
             .map_err(MaidenXError::from)?;
 
         let bias = if bias {
@@ -139,7 +139,7 @@ impl Bilinear {
         let k = 1.0 / ((in1_features * in2_features) as f32).sqrt();
         let weight = Tensor::randn(&[out_features, in1_features, in2_features])
             .map_err(MaidenXError::from)?
-            .mul_scalar(k)
+            .scalar_mul(k)
             .map_err(MaidenXError::from)?;
 
         let bias = if bias {

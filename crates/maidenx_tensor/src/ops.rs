@@ -4,7 +4,9 @@ use maidenx_core::{
     device::Device,
     error::{MaidenXError, Result, TensorError},
 };
-use maidenx_cuda_kernels::tensor_ops::{cuda_tensor_add, cuda_tensor_matmul, cuda_tensor_mul};
+use maidenx_cuda_kernels::tensor_ops::{
+    cuda_tensor_add, cuda_tensor_mat_mul, cuda_tensor_mul, cuda_tensor_scalar_mul,
+};
 
 impl Tensor {
     pub fn add(&self, other: &Tensor) -> Result<Tensor> {
@@ -81,7 +83,7 @@ impl Tensor {
         Ok(result)
     }
 
-    pub fn matmul(&self, other: &Tensor) -> Result<Tensor> {
+    pub fn mat_mul(&self, other: &Tensor) -> Result<Tensor> {
         if self.shape.len() != 2 || other.shape.len() != 2 {
             return Err(TensorError::DimensionMismatch(
                 "Both tensors must be 2-dimensional for matrix multiplication".into(),
@@ -117,11 +119,11 @@ impl Tensor {
                 let a = self.to_vec()?;
                 let b = other.to_vec()?;
                 let result_data =
-                    maidenx_cpu_core::ops::tensor_ops::matmul(&a, &self.shape, &b, &other.shape)?;
+                    maidenx_cpu_core::ops::tensor_ops::mat_mul(&a, &self.shape, &b, &other.shape)?;
                 result.buffer.copy_from_host(&result_data)?;
             }
             Device::Cuda(_) => unsafe {
-                cuda_tensor_matmul(
+                cuda_tensor_mat_mul(
                     result.buffer.as_mut_ptr(),
                     self.buffer.as_ptr(),
                     other.buffer.as_ptr(),
@@ -136,7 +138,7 @@ impl Tensor {
         Ok(result)
     }
 
-    pub fn mul_scalar(&self, scalar: f32) -> Result<Self> {
+    pub fn scalar_mul(&self, scalar: f32) -> Result<Self> {
         let device = maidenx_core::device::get_current_device();
         let mut result = Self {
             buffer: DeviceBuffer::new(self.buffer.len(), &device)?,
@@ -144,13 +146,26 @@ impl Tensor {
             strides: self.strides.clone(),
         };
 
-        let data = self
-            .to_vec()?
-            .iter()
-            .map(|x| x * scalar)
-            .collect::<Vec<f32>>();
+        match &device {
+            Device::Cpu => {
+                let data = self
+                    .to_vec()?
+                    .iter()
+                    .map(|x| x * scalar)
+                    .collect::<Vec<f32>>();
+                result.buffer.copy_from_host(&data)?;
+            }
+            Device::Cuda(_) => unsafe {
+                cuda_tensor_scalar_mul(
+                    result.buffer.as_mut_ptr(),
+                    self.buffer.as_ptr(),
+                    scalar,
+                    self.size(),
+                )
+                .map_err(MaidenXError::from)?;
+            },
+        }
 
-        result.buffer.copy_from_host(&data)?;
         Ok(result)
     }
 }
