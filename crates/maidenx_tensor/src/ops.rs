@@ -6,8 +6,8 @@ use maidenx_core::{
 };
 #[cfg(feature = "cuda")]
 use maidenx_cuda_kernels::tensor_ops::{
-    cuda_tensor_add, cuda_tensor_div, cuda_tensor_mat_mul, cuda_tensor_mul, cuda_tensor_pow,
-    cuda_tensor_scalar_mul,
+    cuda_tensor_add, cuda_tensor_div, cuda_tensor_mat_mul, cuda_tensor_mean, cuda_tensor_mul,
+    cuda_tensor_pow, cuda_tensor_scalar_mul, cuda_tensor_sum,
 };
 
 impl Tensor {
@@ -161,6 +161,40 @@ impl Tensor {
         Ok(result)
     }
 
+    pub fn mean(&self) -> Result<Tensor> {
+        let device = maidenx_core::device::get_current_device();
+        let mut result = Self {
+            buffer: DeviceBuffer::new(std::mem::size_of::<f32>(), &device)?,
+            shape: vec![1],
+            strides: vec![1],
+        };
+
+        match &device {
+            Device::Cpu => {
+                let data = self.to_vec()?;
+                let result_data = maidenx_cpu_core::ops::tensor_ops::mean(&data)?;
+                result.buffer.copy_from_host(&result_data)?;
+            }
+            Device::Cuda(_) => {
+                #[cfg(feature = "cuda")]
+                unsafe {
+                    cuda_tensor_mean(
+                        result.buffer.as_mut_ptr(),
+                        self.buffer.as_ptr(),
+                        self.size(),
+                    )
+                    .map_err(MaidenXError::from)?;
+                }
+                #[cfg(not(feature = "cuda"))]
+                return Err(MaidenXError::UnsupportedOperation(
+                    "CUDA operations are not available - feature not enabled".into(),
+                ));
+            }
+        }
+
+        Ok(result)
+    }
+
     pub fn mul(&self, other: &Tensor) -> Result<Tensor> {
         if self.shape != other.shape {
             return Err(TensorError::ShapeMismatch(format!(
@@ -264,6 +298,40 @@ impl Tensor {
                         result.buffer.as_mut_ptr(),
                         self.buffer.as_ptr(),
                         scalar,
+                        self.size(),
+                    )
+                    .map_err(MaidenXError::from)?;
+                }
+                #[cfg(not(feature = "cuda"))]
+                return Err(MaidenXError::UnsupportedOperation(
+                    "CUDA operations are not available - feature not enabled".into(),
+                ));
+            }
+        }
+
+        Ok(result)
+    }
+
+    pub fn sum(&self) -> Result<Tensor> {
+        let device = maidenx_core::device::get_current_device();
+        let mut result = Self {
+            buffer: DeviceBuffer::new(std::mem::size_of::<f32>(), &device)?,
+            shape: vec![1],
+            strides: vec![1],
+        };
+
+        match &device {
+            Device::Cpu => {
+                let data = self.to_vec()?;
+                let result_data = maidenx_cpu_core::ops::tensor_ops::sum(&data)?;
+                result.buffer.copy_from_host(&result_data)?;
+            }
+            Device::Cuda(_) => {
+                #[cfg(feature = "cuda")]
+                unsafe {
+                    cuda_tensor_sum(
+                        result.buffer.as_mut_ptr(),
+                        self.buffer.as_ptr(),
                         self.size(),
                     )
                     .map_err(MaidenXError::from)?;

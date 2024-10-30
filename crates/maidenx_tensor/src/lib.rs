@@ -244,14 +244,12 @@ mod tests {
     }
 
     #[test]
-    fn test_pow() -> Result<()> {
-        let tensor1 = Tensor::new(vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]])?;
-        let exponent = 2.0;
+    fn test_mean() -> Result<()> {
+        let tensor = Tensor::new(vec![vec![1.0, 2.0], vec![3.0, 4.0]])?;
+        let result = tensor.mean()?;
 
-        let result = tensor1.pow(exponent)?;
-
-        assert_eq!(result.to_vec()?, vec![1.0, 4.0, 9.0, 16.0, 25.0, 36.0]);
-
+        assert_eq!(result.shape(), &[1]);
+        assert!((result.to_vec()?[0] - 2.5).abs() < 1e-5);
         Ok(())
     }
 
@@ -286,6 +284,38 @@ mod tests {
             Err(MaidenXError::TensorError(TensorError::ShapeMismatch(_))) => Ok(()),
             _ => panic!("Expected ShapeMismatch error"),
         }
+    }
+
+    #[test]
+    fn test_pow() -> Result<()> {
+        let tensor1 = Tensor::new(vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]])?;
+        let exponent = 2.0;
+
+        let result = tensor1.pow(exponent)?;
+
+        assert_eq!(result.to_vec()?, vec![1.0, 4.0, 9.0, 16.0, 25.0, 36.0]);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_scalar_mul() -> Result<()> {
+        let tensor = Tensor::new(vec![vec![1.0, 2.0], vec![3.0, 4.0]])?;
+        let result = tensor.scalar_mul(2.0)?;
+
+        assert_eq!(result.shape(), &[2, 2]);
+        assert_eq!(result.to_vec()?, vec![2.0, 4.0, 6.0, 8.0]);
+        Ok(())
+    }
+
+    #[test]
+    fn test_sum() -> Result<()> {
+        let tensor = Tensor::new(vec![vec![1.0, 2.0], vec![3.0, 4.0]])?;
+        let result = tensor.sum()?;
+
+        assert_eq!(result.shape(), &[1]);
+        assert!((result.to_vec()?[0] - 10.0).abs() < 1e-5);
+        Ok(())
     }
 
     #[test]
@@ -369,15 +399,5 @@ mod tests {
             Err(MaidenXError::TensorError(TensorError::ShapeMismatch(_))) => Ok(()),
             _ => panic!("Expected ShapeMismatch error"),
         }
-    }
-
-    #[test]
-    fn test_mul_scalar() -> Result<()> {
-        let tensor = Tensor::new(vec![vec![1.0, 2.0], vec![3.0, 4.0]])?;
-        let result = tensor.scalar_mul(2.0)?;
-
-        assert_eq!(result.shape(), &[2, 2]);
-        assert_eq!(result.to_vec()?, vec![2.0, 4.0, 6.0, 8.0]);
-        Ok(())
     }
 }

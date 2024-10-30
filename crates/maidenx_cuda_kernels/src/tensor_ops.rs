@@ -12,9 +12,11 @@ extern "C" {
         n: i32,
         k: i32,
     );
+    fn tensor_mean(output: *mut f32, input: *const f32, size: usize);
     fn tensor_mul(output: *mut f32, input1: *const f32, input2: *const f32, size: usize);
     fn tensor_pow(output: *mut f32, input: *const f32, exponent: f32, size: usize);
     fn tensor_scalar_mul(output: *mut f32, input: *const f32, scalar: f32, size: usize);
+    fn tensor_sum(output: *mut f32, input: *const f32, size: usize);
 }
 
 /// Performs element-wise addition of two tensors on CUDA device.
@@ -41,7 +43,6 @@ pub unsafe fn cuda_tensor_add(
     size: usize,
 ) -> CudaResult<()> {
     tensor_add(output, input1, input2, size);
-    // TODO add CUDA Error check
     Ok(())
 }
 
@@ -69,7 +70,6 @@ pub unsafe fn cuda_tensor_div(
     size: usize,
 ) -> CudaResult<()> {
     tensor_div(output, input1, input2, size);
-    // TODO add CUDA Error check
     Ok(())
 }
 
@@ -102,7 +102,27 @@ pub unsafe fn cuda_tensor_mat_mul(
     k: i32,
 ) -> CudaResult<()> {
     tensor_mat_mul(output, input1, input2, m, n, k);
-    // TODO add CUDA Error check
+    Ok(())
+}
+
+/// Computes the mean of all elements in a tensor on CUDA device.
+///
+/// # Arguments
+///
+/// * `output` - Pointer to the output buffer on CUDA device (single element)
+/// * `input` - Pointer to the input buffer on CUDA device
+/// * `size` - Number of elements to process
+///
+/// # Safety
+///
+/// Caller must ensure that:
+/// * All pointers point to valid memory on the CUDA device
+/// * `output` buffer has space for a single element
+/// * `input` buffer contains at least `size` elements
+/// * Memory regions do not overlap
+/// * All memory is properly aligned for f32
+pub unsafe fn cuda_tensor_mean(output: *mut f32, input: *const f32, size: usize) -> CudaResult<()> {
+    tensor_mean(output, input, size);
     Ok(())
 }
 
@@ -157,7 +177,6 @@ pub unsafe fn cuda_tensor_mul(
     size: usize,
 ) -> CudaResult<()> {
     tensor_mul(output, input1, input2, size);
-    // TODO add CUDA Error check
     Ok(())
 }
 
@@ -185,7 +204,27 @@ pub unsafe fn cuda_tensor_scalar_mul(
     size: usize,
 ) -> CudaResult<()> {
     tensor_scalar_mul(output, input, scalar, size);
-    // TODO add CUDA Error check
+    Ok(())
+}
+
+/// Computes the sum of all elements in a tensor on CUDA device.
+///
+/// # Arguments
+///
+/// * `output` - Pointer to the output buffer on CUDA device (single element)
+/// * `input` - Pointer to the input buffer on CUDA device
+/// * `size` - Number of elements to process
+///
+/// # Safety
+///
+/// Caller must ensure that:
+/// * All pointers point to valid memory on the CUDA device
+/// * `output` buffer has space for a single element
+/// * `input` buffer contains at least `size` elements
+/// * Memory regions do not overlap
+/// * All memory is properly aligned for f32
+pub unsafe fn cuda_tensor_sum(output: *mut f32, input: *const f32, size: usize) -> CudaResult<()> {
+    tensor_sum(output, input, size);
     Ok(())
 }
 
@@ -225,44 +264,6 @@ mod tests {
                 "Mismatch at position {}: expected {}, got {}",
                 i,
                 3.0,
-                val
-            );
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_tensor_mul() -> CudaResult<()> {
-        let size = 1024;
-        let mut output_buf = CudaBuffer::new(size * std::mem::size_of::<f32>())?;
-        let mut input1_buf = CudaBuffer::new(size * std::mem::size_of::<f32>())?;
-        let mut input2_buf = CudaBuffer::new(size * std::mem::size_of::<f32>())?;
-
-        let input1_data: Vec<f32> = vec![2.0; size];
-        let input2_data: Vec<f32> = vec![3.0; size];
-
-        input1_buf.copy_from_host(&input1_data)?;
-        input2_buf.copy_from_host(&input2_data)?;
-
-        unsafe {
-            cuda_tensor_mul(
-                output_buf.as_mut_ptr(),
-                input1_buf.as_ptr(),
-                input2_buf.as_ptr(),
-                size,
-            )?;
-        }
-
-        let mut output_data = vec![0.0f32; size];
-        output_buf.copy_to_host(&mut output_data)?;
-
-        for (i, &val) in output_data.iter().enumerate() {
-            assert!(
-                (val - 6.0).abs() < 1e-5,
-                "Mismatch at position {}: expected {}, got {}",
-                i,
-                6.0,
                 val
             );
         }
@@ -359,6 +360,70 @@ mod tests {
     }
 
     #[test]
+    fn test_tensor_mean() -> CudaResult<()> {
+        let size = 1024;
+        let mut output_buf = CudaBuffer::new(std::mem::size_of::<f32>())?;
+        let mut input_buf = CudaBuffer::new(size * std::mem::size_of::<f32>())?;
+
+        let input_data: Vec<f32> = vec![2.0; size];
+        input_buf.copy_from_host(&input_data)?;
+
+        unsafe {
+            cuda_tensor_mean(output_buf.as_mut_ptr(), input_buf.as_ptr(), size)?;
+        }
+
+        let mut output_data = vec![0.0f32; 1];
+        output_buf.copy_to_host(&mut output_data)?;
+
+        assert!(
+            (output_data[0] - 2.0).abs() < 1e-5,
+            "Mean mismatch: expected {}, got {}",
+            2.0,
+            output_data[0]
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_tensor_mul() -> CudaResult<()> {
+        let size = 1024;
+        let mut output_buf = CudaBuffer::new(size * std::mem::size_of::<f32>())?;
+        let mut input1_buf = CudaBuffer::new(size * std::mem::size_of::<f32>())?;
+        let mut input2_buf = CudaBuffer::new(size * std::mem::size_of::<f32>())?;
+
+        let input1_data: Vec<f32> = vec![2.0; size];
+        let input2_data: Vec<f32> = vec![3.0; size];
+
+        input1_buf.copy_from_host(&input1_data)?;
+        input2_buf.copy_from_host(&input2_data)?;
+
+        unsafe {
+            cuda_tensor_mul(
+                output_buf.as_mut_ptr(),
+                input1_buf.as_ptr(),
+                input2_buf.as_ptr(),
+                size,
+            )?;
+        }
+
+        let mut output_data = vec![0.0f32; size];
+        output_buf.copy_to_host(&mut output_data)?;
+
+        for (i, &val) in output_data.iter().enumerate() {
+            assert!(
+                (val - 6.0).abs() < 1e-5,
+                "Mismatch at position {}: expected {}, got {}",
+                i,
+                6.0,
+                val
+            );
+        }
+
+        Ok(())
+    }
+
+    #[test]
     fn test_tensor_scalar_mul() -> CudaResult<()> {
         let size = 1024;
         let scalar = 2.5;
@@ -446,6 +511,32 @@ mod tests {
                 val
             );
         }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_tensor_sum() -> CudaResult<()> {
+        let size = 1024;
+        let mut output_buf = CudaBuffer::new(std::mem::size_of::<f32>())?;
+        let mut input_buf = CudaBuffer::new(size * std::mem::size_of::<f32>())?;
+
+        let input_data: Vec<f32> = vec![1.0; size];
+        input_buf.copy_from_host(&input_data)?;
+
+        unsafe {
+            cuda_tensor_sum(output_buf.as_mut_ptr(), input_buf.as_ptr(), size)?;
+        }
+
+        let mut output_data = vec![0.0f32; 1];
+        output_buf.copy_to_host(&mut output_data)?;
+
+        assert!(
+            (output_data[0] - size as f32).abs() < 1e-5,
+            "Sum mismatch: expected {}, got {}",
+            size as f32,
+            output_data[0]
+        );
 
         Ok(())
     }

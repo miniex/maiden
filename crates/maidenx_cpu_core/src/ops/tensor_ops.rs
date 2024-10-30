@@ -38,6 +38,14 @@ pub fn mat_mul(a: &[f32], a_shape: &[usize], b: &[f32], b_shape: &[usize]) -> Cp
     Ok(result)
 }
 
+pub fn mean(a: &[f32]) -> CpuResult<Vec<f32>> {
+    if a.is_empty() {
+        return Err(CpuError::InvalidValue);
+    }
+    let sum: f32 = a.iter().sum();
+    Ok(vec![sum / a.len() as f32])
+}
+
 pub fn mul(a: &[f32], b: &[f32]) -> CpuResult<Vec<f32>> {
     if a.len() != b.len() {
         return Err(CpuError::InvalidValue);
@@ -52,4 +60,11 @@ pub fn pow(a: &[f32], exponent: f32) -> CpuResult<Vec<f32>> {
 
 pub fn scalar_mul(a: &[f32], scalar: f32) -> CpuResult<Vec<f32>> {
     Ok(a.iter().map(|x| x * scalar).collect())
+}
+
+pub fn sum(a: &[f32]) -> CpuResult<Vec<f32>> {
+    if a.is_empty() {
+        return Err(CpuError::InvalidValue);
+    }
+    Ok(vec![a.iter().sum()])
 }
