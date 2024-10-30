@@ -1,4 +1,22 @@
+use crate::Tensor;
 use std::fmt;
+
+impl fmt::Display for Tensor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let data = match self.to_vec() {
+            Ok(data) => data,
+            Err(_) => return write!(f, "Tensor(Failed to fetch data)"),
+        };
+
+        match self.shape.len() {
+            1 => display_1d(f, &data, &self.shape),
+            2 => display_2d(f, &data, &self.shape),
+            3 => display_3d(f, &data, &self.shape),
+            4 => display_4d(f, &data, &self.shape),
+            _ => display_nd(f, &data, &self.shape),
+        }
+    }
+}
 
 pub fn display_1d(f: &mut fmt::Formatter<'_>, data: &[f32], shape: &[usize]) -> fmt::Result {
     write!(f, "Tensor(shape=[{}], data=", shape[0])?;

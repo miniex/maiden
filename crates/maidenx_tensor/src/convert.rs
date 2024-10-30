@@ -1,6 +1,21 @@
+use crate::Tensor;
+use maidenx_core::error::MaidenXError;
+use maidenx_core::error::Result;
+
 pub trait TensorData {
     fn to_flat_vec(self) -> Vec<f32>;
     fn to_shape(&self) -> Vec<usize>;
+}
+
+impl Tensor {
+    pub fn to_vec(&self) -> Result<Vec<f32>> {
+        let num_elements = self.shape.iter().product::<usize>();
+        let mut result = vec![0.0f32; num_elements];
+        self.buffer
+            .copy_to_host(&mut result)
+            .map_err(MaidenXError::from)?;
+        Ok(result)
+    }
 }
 
 impl TensorData for Vec<f32> {
@@ -74,4 +89,3 @@ impl TensorData for Vec<Vec<Vec<Vec<f32>>>> {
         }
     }
 }
-

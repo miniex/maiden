@@ -1,37 +1,19 @@
 mod convert;
 mod display;
+mod ops;
+mod shape;
 
 use convert::TensorData;
 use maidenx_core::buffer::DeviceBuffer;
-use maidenx_core::device::Device;
-use maidenx_core::error::{MaidenXError, Result, TensorError};
-use maidenx_cuda_kernels::tensor_ops::{cuda_tensor_add, cuda_tensor_matmul, cuda_tensor_mul};
+use maidenx_core::error::{Result, TensorError};
 use rand::prelude::*;
 use rand_distr::Normal;
-use std::fmt;
 
 #[derive(Debug, Clone)]
 pub struct Tensor {
     buffer: DeviceBuffer,
     shape: Vec<usize>,
     strides: Vec<usize>,
-}
-
-impl fmt::Display for Tensor {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let data = match self.to_vec() {
-            Ok(data) => data,
-            Err(_) => return write!(f, "Tensor(Failed to fetch data)"),
-        };
-
-        match self.shape.len() {
-            1 => display::display_1d(f, &data, &self.shape),
-            2 => display::display_2d(f, &data, &self.shape),
-            3 => display::display_3d(f, &data, &self.shape),
-            4 => display::display_4d(f, &data, &self.shape),
-            _ => display::display_nd(f, &data, &self.shape),
-        }
-    }
 }
 
 impl Tensor {
@@ -95,276 +77,6 @@ impl Tensor {
         Self::from_vec(data, shape)
     }
 
-    // OPS
-
-    pub fn add(&self, other: &Tensor) -> Result<Tensor> {
-        if self.shape != other.shape {
-            return Err(TensorError::ShapeMismatch(format!(
-                "Cannot add tensors with shapes {:?} and {:?}",
-                self.shape, other.shape
-            ))
-            .into());
-        }
-
-        let device = maidenx_core::device::get_current_device();
-        let mut result = Self {
-            buffer: DeviceBuffer::new(self.buffer.len(), &device)?,
-            shape: self.shape.clone(),
-            strides: self.strides.clone(),
-        };
-
-        match &device {
-            Device::Cpu => {
-                let a = self.to_vec()?;
-                let b = other.to_vec()?;
-                let result_data = maidenx_cpu_core::ops::tensor_ops::add(&a, &b)?;
-                result.buffer.copy_from_host(&result_data)?;
-            }
-            Device::Cuda(_) => unsafe {
-                cuda_tensor_add(
-                    result.buffer.as_mut_ptr(),
-                    self.buffer.as_ptr(),
-                    other.buffer.as_ptr(),
-                    self.size(),
-                )
-                .map_err(MaidenXError::from)?;
-            },
-        }
-
-        Ok(result)
-    }
-
-    pub fn mul(&self, other: &Tensor) -> Result<Tensor> {
-        if self.shape != other.shape {
-            return Err(TensorError::ShapeMismatch(format!(
-                "Cannot multiply tensors with shapes {:?} and {:?}",
-                self.shape, other.shape
-            ))
-            .into());
-        }
-
-        let device = maidenx_core::device::get_current_device();
-        let mut result = Self {
-            buffer: DeviceBuffer::new(self.buffer.len(), &device)?,
-            shape: self.shape.clone(),
-            strides: self.strides.clone(),
-        };
-
-        match &device {
-            Device::Cpu => {
-                let a = self.to_vec()?;
-                let b = other.to_vec()?;
-                let result_data = maidenx_cpu_core::ops::tensor_ops::mul(&a, &b)?;
-                result.buffer.copy_from_host(&result_data)?;
-            }
-            Device::Cuda(_) => unsafe {
-                cuda_tensor_mul(
-                    result.buffer.as_mut_ptr(),
-                    self.buffer.as_ptr(),
-                    other.buffer.as_ptr(),
-                    self.size(),
-                )
-                .map_err(MaidenXError::from)?;
-            },
-        }
-
-        Ok(result)
-    }
-
-    pub fn matmul(&self, other: &Tensor) -> Result<Tensor> {
-        if self.shape.len() != 2 || other.shape.len() != 2 {
-            return Err(TensorError::DimensionMismatch(
-                "Both tensors must be 2-dimensional for matrix multiplication".into(),
-            )
-            .into());
-        }
-
-        let m = self.shape[0];
-        let k = self.shape[1];
-
-        if k != other.shape[0] {
-            return Err(TensorError::ShapeMismatch(format!(
-                "Cannot multiply matrix with shape {:?} and {:?}",
-                self.shape, other.shape
-            ))
-            .into());
-        }
-        let n = other.shape[1];
-
-        let result_shape = vec![m, n];
-        let result_strides = Self::compute_strides(&result_shape);
-        let result_size = m * n * std::mem::size_of::<f32>();
-
-        let device = maidenx_core::device::get_current_device();
-        let mut result = Self {
-            buffer: DeviceBuffer::new(result_size, &device)?,
-            shape: result_shape,
-            strides: result_strides,
-        };
-
-        match &device {
-            Device::Cpu => {
-                let a = self.to_vec()?;
-                let b = other.to_vec()?;
-                let result_data =
-                    maidenx_cpu_core::ops::tensor_ops::matmul(&a, &self.shape, &b, &other.shape)?;
-                result.buffer.copy_from_host(&result_data)?;
-            }
-            Device::Cuda(_) => unsafe {
-                cuda_tensor_matmul(
-                    result.buffer.as_mut_ptr(),
-                    self.buffer.as_ptr(),
-                    other.buffer.as_ptr(),
-                    m as i32,
-                    n as i32,
-                    k as i32,
-                )
-                .map_err(MaidenXError::from)?;
-            },
-        }
-
-        Ok(result)
-    }
-
-    pub fn mul_scalar(&self, scalar: f32) -> Result<Self> {
-        let device = maidenx_core::device::get_current_device();
-        let mut result = Self {
-            buffer: DeviceBuffer::new(self.buffer.len(), &device)?,
-            shape: self.shape.clone(),
-            strides: self.strides.clone(),
-        };
-
-        let data = self
-            .to_vec()?
-            .iter()
-            .map(|x| x * scalar)
-            .collect::<Vec<f32>>();
-
-        result.buffer.copy_from_host(&data)?;
-        Ok(result)
-    }
-
-    // Shape
-
-    pub fn reshape(&mut self, new_shape: &[usize]) -> Result<()> {
-        let new_size: usize = new_shape.iter().product();
-        if new_size != self.size() {
-            return Err(TensorError::ShapeMismatch(format!(
-                "Cannot reshape tensor of size {} into shape {:?}",
-                self.size(),
-                new_shape
-            ))
-            .into());
-        }
-
-        self.shape = new_shape.to_vec();
-        self.strides = Self::compute_strides(&self.shape);
-        Ok(())
-    }
-
-    pub fn split_at(&self, dim: usize, index: usize) -> Result<(Tensor, Tensor)> {
-        if dim >= self.shape.len() {
-            return Err(TensorError::IndexError(format!(
-                "Dimension {} is out of bounds for tensor with {} dimensions",
-                dim,
-                self.shape.len()
-            ))
-            .into());
-        }
-        if index >= self.shape[dim] {
-            return Err(TensorError::IndexError(format!(
-                "Split index {} is out of bounds for dimension {} with size {}",
-                index, dim, self.shape[dim]
-            ))
-            .into());
-        }
-
-        let mut first_shape = self.shape.clone();
-        let mut second_shape = self.shape.clone();
-        first_shape[dim] = index;
-        second_shape[dim] = self.shape[dim] - index;
-
-        let data = self.to_vec()?;
-        let mut first_data = Vec::new();
-        let mut second_data = Vec::new();
-
-        if dim == 0 {
-            let split_point = index * self.strides[0];
-            first_data = data[..split_point].to_vec();
-            second_data = data[split_point..].to_vec();
-        } else if dim == 1 {
-            let rows = self.shape[0];
-            let cols = self.shape[1];
-            for i in 0..rows {
-                let row_start = i * cols;
-                first_data.extend_from_slice(&data[row_start..row_start + index]);
-                second_data.extend_from_slice(&data[row_start + index..row_start + cols]);
-            }
-        }
-
-        Ok((
-            Tensor::from_vec(first_data, &first_shape)?,
-            Tensor::from_vec(second_data, &second_shape)?,
-        ))
-    }
-
-    pub fn cat(tensors: &[&Tensor], dim: usize) -> Result<Tensor> {
-        if tensors.is_empty() {
-            return Err(TensorError::InvalidOperation("Empty tensor list".into()).into());
-        }
-
-        let first = &tensors[0];
-        let mut target_shape = first.shape.clone();
-
-        // Validate shapes
-        for tensor in tensors.iter().skip(1) {
-            if tensor.shape.len() != first.shape.len() {
-                return Err(TensorError::ShapeMismatch(
-                    "All tensors must have the same number of dimensions".into(),
-                )
-                .into());
-            }
-            for (i, (&s1, &s2)) in first.shape.iter().zip(tensor.shape.iter()).enumerate() {
-                if i != dim && s1 != s2 {
-                    return Err(TensorError::ShapeMismatch(format!(
-                        "Incompatible shapes for concatenation: {:?} and {:?}",
-                        first.shape, tensor.shape
-                    ))
-                    .into());
-                }
-            }
-        }
-
-        target_shape[dim] = tensors.iter().map(|t| t.shape[dim]).sum();
-
-        if dim == 0 {
-            let mut result_data = Vec::new();
-            for tensor in tensors {
-                result_data.extend(tensor.to_vec()?);
-            }
-            Tensor::from_vec(result_data, &target_shape)
-        } else if dim == 1 {
-            let rows = target_shape[0];
-            let mut result_data = Vec::new();
-            for row in 0..rows {
-                for tensor in tensors {
-                    let data = tensor.to_vec()?;
-                    let row_start = row * tensor.shape[1];
-                    let row_end = row_start + tensor.shape[1];
-                    result_data.extend_from_slice(&data[row_start..row_end]);
-                }
-            }
-            Tensor::from_vec(result_data, &target_shape)
-        } else {
-            Err(TensorError::InvalidOperation(format!(
-                "Concatenation along dimension {} is not supported",
-                dim
-            ))
-            .into())
-        }
-    }
-
-    // Utility methods
     pub fn data(&self) -> &DeviceBuffer {
         &self.buffer
     }
@@ -396,28 +108,12 @@ impl Tensor {
     pub fn is_empty(&self) -> bool {
         self.shape.iter().any(|&dim| dim == 0)
     }
-
-    pub fn to_vec(&self) -> Result<Vec<f32>> {
-        let num_elements = self.shape.iter().product::<usize>();
-        let mut result = vec![0.0f32; num_elements];
-        self.buffer
-            .copy_to_host(&mut result)
-            .map_err(MaidenXError::from)?;
-        Ok(result)
-    }
-
-    fn compute_strides(shape: &[usize]) -> Vec<usize> {
-        let mut strides = vec![1; shape.len()];
-        for i in (0..shape.len() - 1).rev() {
-            strides[i] = strides[i + 1] * shape[i + 1];
-        }
-        strides
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use maidenx_core::error::MaidenXError;
 
     #[test]
     fn test_1d_tensor() -> Result<()> {
