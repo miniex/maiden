@@ -100,6 +100,8 @@ How to select device:
 *default: cpu*
 
 ```rust
+use maidenx::prelude::*;
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Set CUDA if present on startup
     if let Ok(cuda_device) = Device::cuda(0) {

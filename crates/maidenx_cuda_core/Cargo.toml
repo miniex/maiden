@@ -1,6 +1,6 @@
 [package]
 name = "maidenx_cuda_core"
-version = "0.0.5"
+version = "0.0.6-dev"
 description = "MaidenX CUDA Core"
 license = "MIT OR Apache-2.0"
 authors = ["Han Damin <miniex@daminstudio.net>"]
