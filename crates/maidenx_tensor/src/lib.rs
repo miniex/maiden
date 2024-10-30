@@ -2,6 +2,7 @@ mod convert;
 mod display;
 mod grad;
 mod ops;
+mod overloading;
 mod shape;
 
 use std::cell::RefCell;
@@ -19,6 +20,12 @@ pub struct Tensor {
     strides: Vec<usize>,
     grad: RefCell<Option<Box<Tensor>>>,
     requires_grad: bool,
+}
+
+impl PartialEq for Tensor {
+    fn eq(&self, other: &Self) -> bool {
+        self.shape == other.shape && self.to_vec().unwrap() == other.to_vec().unwrap()
+    }
 }
 
 impl Tensor {
