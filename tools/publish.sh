@@ -8,12 +8,12 @@ crates=(
     maidenx_core
     maidenx_cuda_kernels
 
-    maidenx_math
-    
     maidenx_tensor
     
     maidenx_nn/macros
     maidenx_nn
+
+    maidenx_math
 
     maidenx_internal
 )

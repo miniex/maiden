@@ -6,7 +6,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     set_current_device(Device::cpu())?;
 
     let x = Tensor::linspace(-f32::consts::PI, f32::consts::PI, 2000)?;
-    let y = x.sin()?;
+    let y = sin(&x)?;
 
     let mut a = Tensor::randn(&[1])?;
     let mut b = Tensor::randn(&[1])?;
