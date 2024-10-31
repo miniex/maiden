@@ -9,11 +9,11 @@
     </h3>
 </div>
 
-> [!NOTE]  
-> This project is structured to resemble the PyTorch framework where possible, to aid in familiarization and learning.
+> This project is structured to resemble the PyTorch framework where possible,
+> to aid in familiarization and learning.
 
-> [!WARNING]
-> 🚧 This project is for personal learning and testing purposes, so it may not function properly. 🚧
+> 🚧 This project is for personal learning and testing purposes,
+> so it may not function properly. 🚧
 
 ## Getting Started
 
@@ -22,14 +22,6 @@
 - if you want to use CUDA
     - CUDA Toolkit
     - CMake
-
-### How to use
-
-|            | Using PyTorch                            | Using MaidenX                                                         |
-|------------|------------------------------------------|-----------------------------------------------------------------------|
-| Creation   | `torch.Tensor([[1, 2], [3, 4]])`         | `Tensor::new(vec![vec![1.0, 2.0], vec![3.0, 4.0]])`                   |
-| Creation   | `torch.Tensor([[1, 2], [3, 4]])`         | `Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], &[2, 2])`                 |
-| Creation   | `nn.Sequential(A, B, C)`                 | `nn::ModuleBuilder::new().add_layer(A).add_layer(B).add_layer(C)`     |
 
 ### Example
 
@@ -42,56 +34,57 @@ maidenx = { version = "0.0.5", features = ["full"] }
 # maidenx = { version = "0.0.5", features = ["cuda"] }
 ```
 
-How to use Tensor:
+How to use:
 
 ```rust
 use maidenx::prelude::*;
+use std::f32;
+use std::time::Instant;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let tensor1 = Tensor::new(vec![
-        vec![1.0, 2.0, 3.0],
-        vec![4.0, 5.0, 6.0],
-    ])?;
+    set_current_device(Device::cpu())?;
 
-    let tensor2 = Tensor::new(vec![
-        vec![7.0, 8.0, 9.0],
-        vec![10.0, 11.0, 12.0],
-    ])?;
+    let x = Tensor::linspace(-f32::consts::PI, f32::consts::PI, 2000)?;
+    let y = sin(&x)?;
 
-    let result = tensor1.add(&tensor2)?;
-    
-    println!("Shape: {:?}", result.shape());
-    println!("Result:\n{}", result);
+    let mut a = Tensor::randn(&[1])?;
+    let mut b = Tensor::randn(&[1])?;
+    let mut c = Tensor::randn(&[1])?;
+    let mut d = Tensor::randn(&[1])?;
 
-    Ok(())
-}
-```
+    let start = Instant::now();
 
-How to use linear module:
-```rust
-use maidenx::prelude::*;
+    let learning_rate = 1e-6;
+    for t in 1..=5000 {
+        let y_pred = &a + &b * &x + &c * x.pow(2.0)? + &d * x.pow(3.0)?;
+        let loss = (&y_pred - &y).pow(2.0)?.sum()?;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let input = Tensor::from_vec(vec![1.0, 2.0, 3.0, 4.0], &[2, 2])?;
+        if t % 100 == 0 {
+            println!("t: {}, loss: {}", t, loss.item()?);
+        }
 
-    let linear = nn::Linear::new_with_bias(2, 3, true)?;
+        let grad_y_pred = 2.0 * (&y_pred - &y);
+        let grad_a = grad_y_pred.sum()?;
+        let grad_b = (&grad_y_pred * &x).sum()?;
+        let grad_c = (&grad_y_pred * x.pow(2.0)?).sum()?;
+        let grad_d = (&grad_y_pred * x.pow(3.0)?).sum()?;
 
-    let linear_output = linear.forward(&input)?;
+        a = &a - learning_rate * grad_a;
+        b = &b - learning_rate * grad_b;
+        c = &c - learning_rate * grad_c;
+        d = &d - learning_rate * grad_d;
+    }
 
-    let relu = nn::ReLU::new();
-    let relu_output = relu.forward(&linear_output)?;
+    let elapsed = start.elapsed();
 
-    let sigmoid = nn::Sigmoid::new();
-    let sigmoid_output = sigmoid.forward(&relu_output)?;
-
-    let tanh = nn::Tanh::new();
-    let tanh_output = tanh.forward(&sigmoid_output)?;
-
-    println!("Input:\n{}", input);
-    println!("Linear output:\n{}", linear_output);
-    println!("ReLU output:\n{}", relu_output);
-    println!("Sigmoid output:\n{}", sigmoid_output);
-    println!("Tanh output:\n{}", tanh_output);
+    println!(
+        "Result: y = {} + {}x + {}x^2 + {}x^3",
+        a.item()?,
+        b.item()?,
+        c.item()?,
+        d.item()?
+    );
+    println!("Time: {:?}", elapsed);
 
     Ok(())
 }
