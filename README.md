@@ -1,6 +1,6 @@
 <div align="center">
     <h1>MaidenX</h1>
-    <p>Rust-based CUDA library designed for learning purposes and building my AI engines named Maiden Engine</p>
+    <p>Rust ML Framework designed for learning purposes and building my AI engines named Maiden Engine</p>
     
 [![License](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)](https://github.com/miniex/maidenx#license)
 [![Crates.io](https://img.shields.io/crates/v/maidenx.svg)](https://crates.io/crates/maidenx)
