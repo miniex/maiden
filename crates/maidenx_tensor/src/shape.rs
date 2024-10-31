@@ -128,3 +128,64 @@ impl Tensor {
         strides
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use maidenx_core::error::MaidenXError;
+
+    #[test]
+    fn test_reshape() -> Result<()> {
+        let mut tensor = Tensor::new(vec![1.0, 2.0, 3.0, 4.0])?;
+        tensor.reshape(&[2, 2])?;
+        assert_eq!(tensor.shape(), &[2, 2]);
+
+        match tensor.reshape(&[3, 3]) {
+            Err(MaidenXError::TensorError(TensorError::ShapeMismatch(_))) => Ok(()),
+            _ => panic!("Expected ShapeMismatch error"),
+        }
+    }
+
+    #[test]
+    fn test_split_at() -> Result<()> {
+        let tensor = Tensor::new(vec![vec![1.0, 2.0, 3.0], vec![4.0, 5.0, 6.0]])?;
+        let (first, second) = tensor.split_at(1, 2)?;
+
+        assert_eq!(first.shape(), &[2, 2]);
+        assert_eq!(second.shape(), &[2, 1]);
+        assert_eq!(first.to_vec()?, vec![1.0, 2.0, 4.0, 5.0]);
+        assert_eq!(second.to_vec()?, vec![3.0, 6.0]);
+
+        match tensor.split_at(2, 0) {
+            Err(MaidenXError::TensorError(TensorError::IndexError(_))) => Ok(()),
+            _ => panic!("Expected IndexError"),
+        }
+    }
+
+    #[test]
+    fn test_cat() -> Result<()> {
+        let tensor1 = Tensor::new(vec![vec![1.0, 2.0], vec![3.0, 4.0]])?;
+        let tensor2 = Tensor::new(vec![vec![5.0, 6.0], vec![7.0, 8.0]])?;
+
+        let result = Tensor::cat(&[&tensor1, &tensor2], 0)?;
+        assert_eq!(result.shape(), &[4, 2]);
+        assert_eq!(
+            result.to_vec()?,
+            vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]
+        );
+
+        let result = Tensor::cat(&[&tensor1, &tensor2], 1)?;
+        assert_eq!(result.shape(), &[2, 4]);
+        assert_eq!(
+            result.to_vec()?,
+            vec![1.0, 2.0, 5.0, 6.0, 3.0, 4.0, 7.0, 8.0]
+        );
+
+        // Test error cases
+        let tensor3 = Tensor::new(vec![vec![1.0]])?;
+        match Tensor::cat(&[&tensor1, &tensor3], 0) {
+            Err(MaidenXError::TensorError(TensorError::ShapeMismatch(_))) => Ok(()),
+            _ => panic!("Expected ShapeMismatch error"),
+        }
+    }
+}
